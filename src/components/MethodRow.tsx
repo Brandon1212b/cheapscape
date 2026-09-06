@@ -7,6 +7,7 @@ import type { RankedMethod } from "@/components/skilling-types";
 import type { MethodsMetricView } from "@/components/MethodsGoalBar";
 import { MethodHelpPopover } from "@/components/MethodHelpPopover";
 import { methodFallbackIcon } from "@/lib/method-icons";
+import { lastHomeRange } from "@/lib/tab-memory";
 
 const SCROLL_KEY = "ge-watch-home-scroll";
 
@@ -309,7 +310,6 @@ function PartChip({
   total?: boolean;
 }) {
   const unit = name === "Coins" ? 1 : kind === "input" ? buyPrice(row) : sellPrice(row);
-  const price = unit == null ? null : unit * qty;
   const qtyLabel = total ? compactNum(Math.round(qty)) : formatQty(qty);
   const showQty = total || qty !== 1;
   const inner = (
@@ -323,7 +323,7 @@ function PartChip({
         )}
       </span>
       <span className="text-[11px] font-semibold tabular-nums text-foreground">
-        {price == null ? "-" : gp(price)}
+        {unit == null ? "-" : gp(unit)}
       </span>
     </>
   );
@@ -334,12 +334,13 @@ function PartChip({
       <Link
         to="/item/$id"
         params={{ id: String(row.id) }}
+        search={{ range: lastHomeRange() }}
         className={className}
         title={
-          showQty && unit != null
-            ? total
-              ? `${name} × ${qtyLabel} total @ ${gp(unit)} each`
-              : `${name} x ${qtyLabel} @ ${gp(unit)} each`
+          unit != null
+            ? showQty
+              ? `${name} × ${qtyLabel} @ ${gp(unit)} each`
+              : `${name} @ ${gp(unit)}`
             : name
         }
         aria-label={`View ${name} price history`}
