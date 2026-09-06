@@ -1,4 +1,4 @@
-# OSRS Item Tracker
+# Cheapscape
 
 Live site: [osrs-item-tracker.vercel.app](https://osrs-item-tracker.vercel.app)
 
@@ -28,11 +28,10 @@ A curated catalog of combat gear, skilling items, and supplies — not the entir
 
 Tap any card.
 
-- Current price, high alch, buy limit, members flag, examine text
+- Current price, high alch, buy limit, members flag
 - Equipment bonuses and requirements when the item is wearable
 - Price chart with high/low dots on the actual extrema
-- 180-day percentile bar (“where is today vs the last half year?”)
-- Star to add the item to a local watchlist
+- 180-day percentile (“where is today vs the last half year?”)
 - Link through to the OSRS Wiki
 
 ### Methods (`/methods`)
