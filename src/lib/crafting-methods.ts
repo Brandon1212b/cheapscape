@@ -178,30 +178,6 @@ export const CRAFTING_METHODS: CraftingMethod[] = [
     output: { name: "Dragonstone amulet (u)", qty: 1 },
   },
   {
-    id: "zenyte-ring",
-    label: "Zenyte ring",
-    level: 89,
-    xp: 150,
-    actionsPerHour: 650,
-    inputs: [
-      { name: "Gold bar", qty: 1 },
-      { name: "Zenyte", qty: 1 },
-    ],
-    output: { name: "Zenyte ring", qty: 1 },
-  },
-  {
-    id: "zenyte-amulet-u",
-    label: "Zenyte amulet (u)",
-    level: 98,
-    xp: 200,
-    actionsPerHour: 650,
-    inputs: [
-      { name: "Gold bar", qty: 1 },
-      { name: "Zenyte", qty: 1 },
-    ],
-    output: { name: "Zenyte amulet (u)", qty: 1 },
-  },
-  {
     id: "water-battlestaff",
     label: "Water battlestaff",
     level: 54,
