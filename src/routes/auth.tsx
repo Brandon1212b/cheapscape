@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Accounts — GE Watch OSRS price tracker" },
+      { title: "Accounts — Cheapscape" },
       {
         name: "description",
         content: "Cloud sign-in is turned off. Watchlists stay on this device.",

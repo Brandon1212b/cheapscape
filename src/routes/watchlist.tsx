@@ -21,13 +21,13 @@ import {
 export const Route = createFileRoute("/watchlist")({
   head: () => ({
     meta: [
-      { title: "My watchlist — GE Watch OSRS price alerts" },
+      { title: "My watchlist — Cheapscape" },
       {
         name: "description",
         content:
           "Track your OSRS gear and skilling items, set price targets or percentage-drop alerts, and see which ones are cheap right now.",
       },
-      { property: "og:title", content: "My watchlist — GE Watch OSRS price alerts" },
+      { property: "og:title", content: "My watchlist — Cheapscape" },
       {
         property: "og:description",
         content: "Your tracked Old School RuneScape items with live prices and buy alerts.",

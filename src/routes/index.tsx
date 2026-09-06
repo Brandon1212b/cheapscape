@@ -29,13 +29,13 @@ export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): HomeSearch => homeSearchSchema.parse(search),
   head: () => ({
     meta: [
-      { title: "GE Watch — OSRS Gear & Skilling Price Tracker" },
+      { title: "Cheapscape — OSRS gear & skilling prices" },
       {
         name: "description",
         content:
           "Live OSRS Grand Exchange prices for gear and skilling supplies, with range-based buy signals so you know when an item is actually cheap.",
       },
-      { property: "og:title", content: "GE Watch — OSRS Gear & Skilling Price Tracker" },
+      { property: "og:title", content: "Cheapscape — OSRS gear & skilling prices" },
       {
         property: "og:description",
         content:
