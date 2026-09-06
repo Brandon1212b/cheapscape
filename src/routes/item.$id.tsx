@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, ExternalLink, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronLeft, ExternalLink, RefreshCw } from "lucide-react";
 import { fetchItemDetail, fetchWikiRecommended } from "@/lib/osrs.functions";
 import type { WikiRecUse } from "@/lib/wiki-recommended";
 import type { EquipmentStats, RangeKey } from "@/lib/osrs.server";
@@ -10,8 +10,9 @@ import { CATALOG } from "@/lib/osrs-catalog";
 import { PriceChart } from "@/components/PriceChart";
 import { WikiImage } from "@/components/WikiImage";
 import { gp, formatCompact, signalOf, timeAgo } from "@/lib/format";
-import { lastTabSearch } from "@/lib/tab-memory";
+import { lastHomeRange, lastTabSearch } from "@/lib/tab-memory";
 
+const RANGE_KEYS: RangeKey[] = ["1d", "1w", "1m", "3m", "6m", "1y"];
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: "1d", label: "24h" },
   { key: "1w", label: "1W" },
@@ -21,7 +22,6 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "1y", label: "1Y" },
 ];
 
-/** Same icons as Template:Infobox Bonuses on the OSRS Wiki. */
 const BONUS_ICONS = {
   stab: "White_dagger.png",
   slash: "White_scimitar.png",
@@ -37,7 +37,15 @@ const BONUS_ICONS = {
   other: "Melee.png",
 } as const;
 
+type ItemSearch = { range?: RangeKey };
+
 export const Route = createFileRoute("/item/$id")({
+  validateSearch: (search: Record<string, unknown>): ItemSearch => {
+    const raw = search.range;
+    return {
+      range: typeof raw === "string" && RANGE_KEYS.includes(raw as RangeKey) ? (raw as RangeKey) : undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "Item price & history — GE Watch OSRS" },
@@ -67,12 +75,54 @@ function fmtBonus(n: number, suffix = "") {
   return s + suffix;
 }
 
+function activityGroup(method: string): string {
+  const m = method.toLowerCase();
+  if (m.includes("slayer")) return "Slayer";
+  if (m.includes("theatre of blood") || m.includes("entry mode")) return "ToB";
+  if (m.includes("chambers of xeric")) return "CoX";
+  if (m.includes("tombs of amascut")) return "ToA";
+  if (
+    m.includes("wilderness") ||
+    m.includes("revenant") ||
+    m.includes("callisto") ||
+    m.includes("vet'ion") ||
+    m.includes("venenatis") ||
+    m.includes("spindel") ||
+    m.includes("artio") ||
+    m.includes("calvar'ion")
+  ) {
+    return "Wilderness";
+  }
+  if (m.includes("nightmare zone")) return "NMZ";
+  if (m.includes("fight cave") || m.includes("inferno") || m.includes("colosseum")) return "TzHaar";
+  if (m.includes("ultimate ironman")) return "UIM";
+  if (m.includes("barbarian assault") || m.includes("pest control") || m.includes("tempoross") || m.includes("wintertodt")) {
+    return "Minigames";
+  }
+  return method.split("/")[0]?.replace(/_/g, " ").trim() || "Other";
+}
+
 function ItemPage() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
   const router = useRouter();
-  const [range, setRange] = useState<RangeKey>("6m");
+  const [range, setRange] = useState<RangeKey>(search.range ?? lastHomeRange());
   const getDetail = useServerFn(fetchItemDetail);
   const getWikiRec = useServerFn(fetchWikiRecommended);
+
+  useEffect(() => {
+    if (search.range && search.range !== range) setRange(search.range);
+  }, [search.range]);
+
+  const setChartRange = (next: RangeKey) => {
+    setRange(next);
+    void router.navigate({
+      to: "/item/$id",
+      params: { id },
+      search: { range: next },
+      replace: true,
+    });
+  };
 
   const detail = useQuery({
     queryKey: ["item", id, range],
@@ -86,6 +136,9 @@ function ItemPage() {
   const group = row ? groupFor(row.name) : undefined;
   const price = row ? (row.high ?? row.low) : null;
   const eq = d?.equipment ?? null;
+  const cheapPct = d?.trend != null ? Math.max(0, 100 - d.trend.percentile) : null;
+  const alchVsBuy =
+    row?.highalch != null && price != null ? row.highalch - price : null;
 
   const wikiRec = useQuery({
     queryKey: ["wiki-rec", row?.name],
@@ -142,7 +195,7 @@ function ItemPage() {
 
       {row && d && (
         <>
-          <header className="panel mt-2 flex flex-wrap items-start gap-4 p-5 sm:p-6">
+          <header className="panel mt-2 flex flex-wrap items-start gap-4 p-4 sm:p-5">
             <WikiImage
               icon={row.icon}
               alt={row.name}
@@ -153,21 +206,25 @@ function ItemPage() {
             />
             <div className="min-w-0 flex-1">
               <h1 className="font-sans text-2xl font-bold leading-tight sm:text-3xl">{row.name}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">{row.examine}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <RefreshCw className={`size-3.5 ${detail.isFetching ? "animate-spin" : ""}`} />
-                  Updated {timeAgo(row.updated)}
-                </span>
-                <span>{row.limit ? `Buy limit ${formatCompact(row.limit)}` : "No buy limit"}</span>
-                <span>{row.members ? "Members" : "Free to play"}</span>
-                {eq?.slot && (
-                  <span className="capitalize">Slot: {eq.slot.replace(/_/g, " ")}</span>
-                )}
-              </div>
+              <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                {row.examine}
+                {" · "}
+                {row.members ? "Members" : "F2P"}
+                {" · "}
+                {row.limit ? `Limit ${formatCompact(row.limit)}` : "No limit"}
+                {" · "}
+                {timeAgo(row.updated)}
+              </p>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold tabular-nums gold-text">{gp(price)}</div>
+              {cheapPct != null && (
+                <div className="text-[11px] text-muted-foreground">
+                  {d.trend!.percentile <= 50
+                    ? `Cheaper than ${cheapPct}% of 180 days`
+                    : `Richer than ${d.trend!.percentile}% of 180 days`}
+                </div>
+              )}
               <div className="mt-1.5 space-y-0.5 text-xs tabular-nums">
                 <div className="flex items-baseline justify-end gap-2">
                   <span className="text-muted-foreground">Buy</span>
@@ -181,7 +238,24 @@ function ItemPage() {
                   <div className="text-[11px] text-muted-foreground">Spread {gp(row.high - row.low)}</div>
                 )}
                 {row.highalch != null && (
-                  <div className="text-muted-foreground">High alch {gp(row.highalch)}</div>
+                  <div
+                    className="text-[11px] tabular-nums"
+                    style={{
+                      color:
+                        alchVsBuy == null
+                          ? "var(--muted-foreground)"
+                          : alchVsBuy > 0
+                            ? "var(--deal)"
+                            : alchVsBuy < 0
+                              ? "var(--steep)"
+                              : "var(--muted-foreground)",
+                    }}
+                  >
+                    High alch {gp(row.highalch)}
+                    {alchVsBuy != null && alchVsBuy !== 0
+                      ? ` (${alchVsBuy > 0 ? "+" : ""}${gp(alchVsBuy)} vs buy)`
+                      : ""}
+                  </div>
                 )}
                 {row.volume != null && (
                   <div className="text-muted-foreground">24h vol {formatCompact(row.volume)}</div>
@@ -228,7 +302,7 @@ function ItemPage() {
                 {RANGES.map((r) => (
                   <button
                     key={r.key}
-                    onClick={() => setRange(r.key)}
+                    onClick={() => setChartRange(r.key)}
                     className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
                       range === r.key
                         ? "bg-primary text-primary-foreground"
@@ -244,24 +318,6 @@ function ItemPage() {
             <div className="mt-4">
               <PriceChart series={d.series} tone={signal.token} intraday={range === "1d" || range === "1w"} />
             </div>
-
-            {d.trend && (
-              <div className="mt-5 space-y-1.5">
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full"
-                    style={{ width: `${Math.max(2, d.trend.percentile)}%`, background: `var(--${signal.token})` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
-                  <span>{gp(d.trend.low180)}</span>
-                  <span>
-                    Today sits at the {d.trend.percentile}th percentile of the last 180 days
-                  </span>
-                  <span>{gp(d.trend.high180)}</span>
-                </div>
-              </div>
-            )}
           </section>
 
           <WhyBuyPanel
@@ -294,7 +350,17 @@ function WhyBuyPanel({
   uses: WikiRecUse[];
   wikiHref: string;
 }) {
-  const rows = [...uses].sort((a, b) => a.rank - b.rank);
+  const groups = useMemo(() => {
+    const map = new Map<string, WikiRecUse[]>();
+    const rows = [...uses].sort((a, b) => a.rank - b.rank || a.method.localeCompare(b.method));
+    for (const u of rows) {
+      const key = activityGroup(u.method);
+      const list = map.get(key) ?? [];
+      list.push(u);
+      map.set(key, list);
+    }
+    return [...map.entries()];
+  }, [uses]);
 
   return (
     <section className="panel mt-4 p-3">
@@ -312,27 +378,36 @@ function WhyBuyPanel({
       {note && <p className="mb-1.5 text-[11px] leading-snug text-muted-foreground">{note}</p>}
       {loading ? (
         <div className="h-16 animate-pulse rounded-md bg-secondary/40" />
-      ) : rows.length > 0 ? (
+      ) : groups.length > 0 ? (
         <div className="max-h-40 overflow-y-auto overscroll-contain pr-1">
-          <ul className="divide-y divide-border/40">
-            {rows.map((u) => (
-              <li key={`${u.rank}-${u.href}-${u.style ?? ""}-${u.table}`}>
-                <a
-                  href={u.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-baseline gap-2 py-1 text-xs hover:bg-secondary/40"
-                >
-                  <span className="w-3 shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">{u.rank}</span>
-                  <span className="min-w-0 truncate">
-                    <span className="font-medium text-foreground">{u.method}</span>
-                    {u.style && <span className="text-muted-foreground"> ({u.style})</span>}
-                    {u.table === "special" && <span className="text-muted-foreground"> spec</span>}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
+          {groups.map(([label, rows]) => (
+            <div key={label} className="mb-1.5 last:mb-0">
+              <div className="sticky top-0 bg-background/90 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {label}
+              </div>
+              <ul className="divide-y divide-border/40">
+                {rows.map((u) => (
+                  <li key={`${u.rank}-${u.href}-${u.style ?? ""}-${u.table}`}>
+                    <a
+                      href={u.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-baseline gap-2 py-1 text-xs hover:bg-secondary/40"
+                    >
+                      <span className="w-3 shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">
+                        {u.rank}
+                      </span>
+                      <span className="min-w-0 truncate">
+                        <span className="font-medium text-foreground">{u.method}</span>
+                        {u.style && <span className="text-muted-foreground"> ({u.style})</span>}
+                        {u.table === "special" && <span className="text-muted-foreground"> spec</span>}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       ) : (
         <p className="text-[11px] text-muted-foreground">No rank 1 or 2 wiki uses listed.</p>
@@ -342,6 +417,7 @@ function WhyBuyPanel({
 }
 
 function EquipmentPanel({ eq }: { eq: EquipmentStats }) {
+  const [open, setOpen] = useState(false);
   const reqs = eq.requirements
     ? Object.entries(eq.requirements).sort(([a], [b]) => a.localeCompare(b))
     : [];
@@ -368,29 +444,38 @@ function EquipmentPanel({ eq }: { eq: EquipmentStats }) {
   ];
 
   return (
-    <section className="panel mt-4 px-3 py-2.5 sm:px-4">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-        {eq.slot && <span className="capitalize">Slot: {eq.slot.replace(/_/g, " ")}</span>}
-        {eq.weapon_type && <span className="capitalize">Type: {eq.weapon_type.replace(/_/g, " ")}</span>}
-        {eq.attack_speed != null && <span>Speed: {eq.attack_speed}</span>}
-        {reqs.length > 0 && (
-          <span>
-            Req{" "}
-            {reqs.map(([skill, level], i) => (
-              <span key={skill}>
-                {i > 0 ? ", " : ""}
-                <span className="font-medium capitalize text-foreground">{skill}</span> {level}
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
+    <section className="panel mt-4 px-3 py-2 sm:px-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 text-left text-[11px] text-muted-foreground"
+      >
+        <span className="min-w-0 flex-1 truncate">
+          {eq.slot && <span className="capitalize">{eq.slot.replace(/_/g, " ")}</span>}
+          {eq.weapon_type && <span className="capitalize"> · {eq.weapon_type.replace(/_/g, " ")}</span>}
+          {eq.attack_speed != null && <span> · spd {eq.attack_speed}</span>}
+          {reqs.length > 0 && (
+            <span>
+              {" · req "}
+              {reqs.map(([skill, level], i) => (
+                <span key={skill}>
+                  {i > 0 ? ", " : ""}
+                  <span className="font-medium capitalize text-foreground">{skill}</span> {level}
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
 
-      <div className="mt-2 space-y-1.5">
-        <BonusRow headerIcon={BONUS_ICONS.attack} headerLabel="Attack" cells={attack} />
-        <BonusRow headerIcon={BONUS_ICONS.defence} headerLabel="Defence" cells={defence} />
-        <BonusRow headerIcon={BONUS_ICONS.other} headerLabel="Other" cells={other} />
-      </div>
+      {open && (
+        <div className="mt-2 space-y-1.5 pb-1">
+          <BonusRow headerIcon={BONUS_ICONS.attack} headerLabel="Attack" cells={attack} />
+          <BonusRow headerIcon={BONUS_ICONS.defence} headerLabel="Defence" cells={defence} />
+          <BonusRow headerIcon={BONUS_ICONS.other} headerLabel="Other" cells={other} />
+        </div>
+      )}
     </section>
   );
 }
