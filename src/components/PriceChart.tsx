@@ -11,7 +11,6 @@ function niceStep(raw: number): number {
   return nf * 10 ** exp;
 }
 
-/** Even ticks that sit on round GP / volume numbers. */
 function niceTicks(min: number, max: number, target = 5): number[] {
   if (!(max > min)) return [min];
   const step = niceStep((max - min) / Math.max(1, target - 1));
@@ -76,7 +75,7 @@ export function PriceChart({
 
   const volumes = series.map((s) => s.v ?? 0);
   const hasVolume = volumes.some((v) => v > 0);
-  const rawMaxVol = Math.max(0, ...volumes);
+  const maxVol = Math.max(0, ...volumes);
 
   const w = 800;
   const h = hasVolume ? 340 : 280;
@@ -100,9 +99,6 @@ export function PriceChart({
   const y = (p: number) => padT + (1 - (p - axisMin) / span) * (priceBottom - padT);
   const barW = Math.max(1.2, ((w - padL - padR) / series.length) * 0.72);
 
-  const volDomain = niceDomain(0, Math.max(rawMaxVol, 1), 3);
-  const maxVol = volDomain.hi;
-
   const pctX = (i: number) => `${(x(i) / w) * 100}%`;
   const pctY = (p: number) => `${(y(p) / h) * 100}%`;
   const pctOfH = (svgY: number) => `${(svgY / h) * 100}%`;
@@ -120,14 +116,6 @@ export function PriceChart({
     value,
     top: pctOfH(y(value)),
   }));
-  const volTicks = hasVolume
-    ? niceTicks(0, maxVol, 3)
-        .filter((value) => value > 0)
-        .map((value) => ({
-          value,
-          top: pctOfH(h - padB - (value / maxVol) * volH),
-        }))
-    : [];
 
   return (
     <div className="relative">
@@ -225,15 +213,14 @@ export function PriceChart({
           </div>
         ))}
 
-        {volTicks.map((tick) => (
+        {hasVolume && maxVol > 0 && (
           <div
-            key={`v-${tick.value}`}
-            className="pointer-events-none absolute right-0 z-[2] -translate-y-1/2 rounded bg-background/80 px-1 py-0.5 text-[11px] font-semibold tabular-nums leading-none text-muted-foreground"
-            style={{ top: tick.top }}
+            className="pointer-events-none absolute right-0 z-[2] rounded bg-background/80 px-1 py-0.5 text-[11px] font-semibold tabular-nums leading-none text-muted-foreground"
+            style={{ top: pctOfH(h - padB - volH) }}
           >
-            {axisGp(tick.value)}
+            {axisGp(maxVol)} vol
           </div>
-        ))}
+        )}
 
         <Marker
           left={pctX(highIdx)}
