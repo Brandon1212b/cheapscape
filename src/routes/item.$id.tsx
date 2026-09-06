@@ -3,7 +3,8 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ExternalLink, RefreshCw } from "lucide-react";
-import { fetchItemDetail } from "@/lib/osrs.functions";
+import { fetchItemDetail, fetchWikiRecommended } from "@/lib/osrs.functions";
+import type { WikiRecUse } from "@/lib/wiki-recommended";
 import type { EquipmentStats, RangeKey } from "@/lib/osrs.server";
 import { CATALOG } from "@/lib/osrs-catalog";
 import { PriceChart } from "@/components/PriceChart";
@@ -71,6 +72,7 @@ function ItemPage() {
   const router = useRouter();
   const [range, setRange] = useState<RangeKey>("6m");
   const getDetail = useServerFn(fetchItemDetail);
+  const getWikiRec = useServerFn(fetchWikiRecommended);
 
   const detail = useQuery({
     queryKey: ["item", id, range],
@@ -84,6 +86,13 @@ function ItemPage() {
   const group = row ? groupFor(row.name) : undefined;
   const price = row ? (row.high ?? row.low) : null;
   const eq = d?.equipment ?? null;
+
+  const wikiRec = useQuery({
+    queryKey: ["wiki-rec", row?.name],
+    queryFn: () => getWikiRec({ data: { name: row!.name } }),
+    enabled: Boolean(row?.name),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
   const goBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -109,6 +118,10 @@ function ItemPage() {
       window.removeEventListener("touchend", onEnd);
     };
   }, [router]);
+
+  const wikiItemHref = row
+    ? `https://oldschool.runescape.wiki/w/${encodeURIComponent(row.name.replace(/ /g, "_"))}`
+    : "";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6">
@@ -251,28 +264,13 @@ function ItemPage() {
             )}
           </section>
 
-          <section className="panel mt-4 p-5 sm:p-6">
-            <h2 className="text-lg font-semibold">
-              {group?.kind === "skilling" ? "Wiki training method" : "Why players buy this"}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {group ? (
-                <>
-                  <span className="font-medium text-foreground">{group.label}</span> — {group.note}
-                </>
-              ) : (
-                "This item isn't part of a tracked training method."
-              )}
-            </p>
-            <a
-              href={`https://oldschool.runescape.wiki/w/${encodeURIComponent(row.name.replace(/ /g, "_"))}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-            >
-              Open on the OSRS Wiki <ExternalLink className="size-3.5" />
-            </a>
-          </section>
+          <WhyBuyPanel
+            title={group?.kind === "skilling" ? "Wiki training method" : "Why players buy this"}
+            note={group ? `${group.label} — ${group.note}` : null}
+            loading={wikiRec.isLoading}
+            uses={wikiRec.data?.uses ?? []}
+            wikiHref={wikiItemHref}
+          />
 
           <footer className="mt-10 border-t border-border/60 pt-6 text-xs text-muted-foreground">
             Price data from the OSRS Wiki real-time Grand Exchange API. Not affiliated with Jagex.
@@ -280,6 +278,66 @@ function ItemPage() {
         </>
       )}
     </main>
+  );
+}
+
+function WhyBuyPanel({
+  title,
+  note,
+  loading,
+  uses,
+  wikiHref,
+}: {
+  title: string;
+  note: string | null;
+  loading: boolean;
+  uses: WikiRecUse[];
+  wikiHref: string;
+}) {
+  const rows = [...uses].sort((a, b) => a.rank - b.rank);
+
+  return (
+    <section className="panel mt-4 p-3">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <a
+          href={wikiHref}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex shrink-0 items-center gap-1 text-[11px] text-primary hover:underline"
+        >
+          Open on wiki <ExternalLink className="size-3" />
+        </a>
+      </div>
+      {note && <p className="mb-1.5 text-[11px] leading-snug text-muted-foreground">{note}</p>}
+      {loading ? (
+        <div className="h-16 animate-pulse rounded-md bg-secondary/40" />
+      ) : rows.length > 0 ? (
+        <div className="max-h-40 overflow-y-auto overscroll-contain pr-1">
+          <ul className="divide-y divide-border/40">
+            {rows.map((u) => (
+              <li key={`${u.rank}-${u.href}-${u.style ?? ""}-${u.table}`}>
+                <a
+                  href={u.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-baseline gap-2 py-1 text-xs hover:bg-secondary/40"
+                >
+                  <span className="w-3 shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">{u.rank}</span>
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium text-foreground">{u.method}</span>
+                    {u.style && <span className="text-muted-foreground"> ({u.style})</span>}
+                    {u.table === "special" && <span className="text-muted-foreground"> spec</span>}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">No rank 1 or 2 wiki uses listed.</p>
+      )}
+    </section>
   );
 }
 

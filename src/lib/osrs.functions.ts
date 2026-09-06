@@ -25,6 +25,7 @@ import { wikiAuditActivityItemNames } from "./wiki-audit-activities";
 import { sepulchreFloor5ItemNames } from "./sepulchre-floor5";
 import { sepulchreFloor4ItemNames } from "./sepulchre-floor4";
 import type { ItemDetail, PriceRow, PlayerStatsResult, RangeKey, Trend } from "./osrs.server";
+import type { WikiRecResult } from "./wiki-recommended";
 
 const allNames = () => {
   const fromCatalog = CATALOG.flatMap((g) => g.items.map((i) => i.name));
@@ -90,3 +91,10 @@ export const fetchItemRequirements = createServerFn({ method: "GET" }).handler(
     return getItemRequirementsMap(allNames());
   },
 );
+
+export const fetchWikiRecommended = createServerFn({ method: "GET" })
+  .inputValidator((d: { name: string }) => d)
+  .handler(async ({ data }): Promise<WikiRecResult> => {
+    const { getWikiRecommended } = await import("./wiki-recommended");
+    return getWikiRecommended(data.name);
+  });
