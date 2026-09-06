@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, ChevronLeft, ExternalLink, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronLeft, ExternalLink } from "lucide-react";
 import { fetchItemDetail, fetchWikiRecommended } from "@/lib/osrs.functions";
 import type { WikiRecUse } from "@/lib/wiki-recommended";
 import type { EquipmentStats, RangeKey } from "@/lib/osrs.server";
@@ -78,28 +78,17 @@ function fmtBonus(n: number, suffix = "") {
 function activityGroup(method: string): string {
   const m = method.toLowerCase();
   if (m.includes("slayer")) return "Slayer";
-  if (m.includes("theatre of blood") || m.includes("entry mode")) return "ToB";
-  if (m.includes("chambers of xeric")) return "CoX";
-  if (m.includes("tombs of amascut")) return "ToA";
   if (
-    m.includes("wilderness") ||
-    m.includes("revenant") ||
-    m.includes("callisto") ||
-    m.includes("vet'ion") ||
-    m.includes("venenatis") ||
-    m.includes("spindel") ||
-    m.includes("artio") ||
-    m.includes("calvar'ion")
+    m.includes("wintertodt") ||
+    m.includes("tempoross") ||
+    m.includes("guardians of the rift") ||
+    m.includes("blast furnace") ||
+    m.includes("motherlode")
   ) {
-    return "Wilderness";
+    return "Skilling";
   }
-  if (m.includes("nightmare zone")) return "NMZ";
-  if (m.includes("fight cave") || m.includes("inferno") || m.includes("colosseum")) return "TzHaar";
   if (m.includes("ultimate ironman")) return "UIM";
-  if (m.includes("barbarian assault") || m.includes("pest control") || m.includes("tempoross") || m.includes("wintertodt")) {
-    return "Minigames";
-  }
-  return method.split("/")[0]?.replace(/_/g, " ").trim() || "Other";
+  return "PvM";
 }
 
 function ItemPage() {
