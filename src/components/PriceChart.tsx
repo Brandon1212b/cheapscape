@@ -3,6 +3,58 @@ import { formatCompact, gp } from "@/lib/format";
 
 type Point = { t: number; p: number; v?: number };
 
+function niceStep(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return 1;
+  const exp = Math.floor(Math.log10(raw));
+  const f = raw / 10 ** exp;
+  const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+  return nf * 10 ** exp;
+}
+
+/** Even ticks that sit on round GP / volume numbers. */
+function niceTicks(min: number, max: number, target = 5): number[] {
+  if (!(max > min)) return [min];
+  const step = niceStep((max - min) / Math.max(1, target - 1));
+  const start = Math.ceil(min / step) * step;
+  const end = Math.floor(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = start; v <= end + step * 0.25; v += step) {
+    const n = Number(v.toPrecision(12));
+    if (n >= min - step * 1e-6 && n <= max + step * 1e-6) ticks.push(n);
+  }
+  if (!ticks.length) ticks.push(min, max);
+  return ticks;
+}
+
+function niceDomain(min: number, max: number, target = 5): { lo: number; hi: number } {
+  if (!(max > min)) {
+    const pad = Math.max(1, Math.abs(min) * 0.05);
+    return { lo: min - pad, hi: max + pad };
+  }
+  const step = niceStep((max - min) / Math.max(1, target - 1));
+  return {
+    lo: Math.floor(min / step) * step,
+    hi: Math.ceil(max / step) * step,
+  };
+}
+
+function axisGp(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) {
+    const v = n / 1_000_000_000;
+    return `${Number.isInteger(v) ? v : +v.toFixed(1)}b`;
+  }
+  if (abs >= 1_000_000) {
+    const v = n / 1_000_000;
+    return `${Number.isInteger(v) ? v : +v.toFixed(1)}m`;
+  }
+  if (abs >= 1_000) {
+    const v = n / 1_000;
+    return `${Number.isInteger(v) ? v : +v.toFixed(1)}k`;
+  }
+  return `${Math.round(n)}`;
+}
+
 export function PriceChart({
   series,
   tone = "fair",
@@ -24,7 +76,7 @@ export function PriceChart({
 
   const volumes = series.map((s) => s.v ?? 0);
   const hasVolume = volumes.some((v) => v > 0);
-  const maxVol = Math.max(0, ...volumes);
+  const rawMaxVol = Math.max(0, ...volumes);
 
   const w = 800;
   const h = hasVolume ? 340 : 280;
@@ -36,16 +88,20 @@ export function PriceChart({
   const gap = hasVolume ? 10 : 0;
   const priceBottom = h - padB - volH - gap;
   const prices = series.map((s) => s.p);
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const span = max - min || 1;
+  const dataMin = Math.min(...prices);
+  const dataMax = Math.max(...prices);
+  const { lo: axisMin, hi: axisMax } = niceDomain(dataMin, dataMax, 5);
+  const span = axisMax - axisMin || 1;
 
-  const highIdx = prices.indexOf(max);
-  const lowIdx = prices.indexOf(min);
+  const highIdx = prices.indexOf(dataMax);
+  const lowIdx = prices.indexOf(dataMin);
 
   const x = (i: number) => padL + (i / (series.length - 1)) * (w - padL - padR);
-  const y = (p: number) => padT + (1 - (p - min) / span) * (priceBottom - padT);
+  const y = (p: number) => padT + (1 - (p - axisMin) / span) * (priceBottom - padT);
   const barW = Math.max(1.2, ((w - padL - padR) / series.length) * 0.72);
+
+  const volDomain = niceDomain(0, Math.max(rawMaxVol, 1), 3);
+  const maxVol = volDomain.hi;
 
   const pctX = (i: number) => `${(x(i) / w) * 100}%`;
   const pctY = (p: number) => `${(y(p) / h) * 100}%`;
@@ -60,17 +116,18 @@ export function PriceChart({
 
   const active = hover != null ? series[hover] : null;
 
-  const priceTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => {
-    const value = max - f * span;
-    return { f, value, top: pctOfH(padT + f * (priceBottom - padT)) };
-  });
-  const volTicks =
-    hasVolume && maxVol > 0
-      ? [
-          { value: maxVol, top: pctOfH(h - padB - volH) },
-          { value: maxVol / 2, top: pctOfH(h - padB - volH / 2) },
-        ]
-      : [];
+  const priceTicks = niceTicks(axisMin, axisMax, 5).map((value) => ({
+    value,
+    top: pctOfH(y(value)),
+  }));
+  const volTicks = hasVolume
+    ? niceTicks(0, maxVol, 3)
+        .filter((value) => value > 0)
+        .map((value) => ({
+          value,
+          top: pctOfH(h - padB - (value / maxVol) * volH),
+        }))
+    : [];
 
   return (
     <div className="relative">
@@ -109,13 +166,13 @@ export function PriceChart({
               <stop offset="100%" stopColor={`var(--${tone})`} stopOpacity="0" />
             </linearGradient>
           </defs>
-          {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+          {priceTicks.map((tick) => (
             <line
-              key={f}
+              key={tick.value}
               x1={padL}
               x2={w - padR}
-              y1={padT + f * (priceBottom - padT)}
-              y2={padT + f * (priceBottom - padT)}
+              y1={y(tick.value)}
+              y2={y(tick.value)}
               stroke="var(--border)"
               strokeWidth="1"
               vectorEffect="non-scaling-stroke"
@@ -160,11 +217,11 @@ export function PriceChart({
 
         {priceTicks.map((tick) => (
           <div
-            key={`p-${tick.f}`}
+            key={`p-${tick.value}`}
             className="pointer-events-none absolute left-0 z-[2] -translate-y-1/2 rounded bg-background/80 px-1 py-0.5 text-[11px] font-semibold tabular-nums leading-none text-foreground"
             style={{ top: tick.top }}
           >
-            {gp(tick.value)}
+            {axisGp(tick.value)}
           </div>
         ))}
 
@@ -174,23 +231,23 @@ export function PriceChart({
             className="pointer-events-none absolute right-0 z-[2] -translate-y-1/2 rounded bg-background/80 px-1 py-0.5 text-[11px] font-semibold tabular-nums leading-none text-muted-foreground"
             style={{ top: tick.top }}
           >
-            vol {formatCompact(tick.value)}
+            {axisGp(tick.value)}
           </div>
         ))}
 
         <Marker
           left={pctX(highIdx)}
-          top={pctY(max)}
+          top={pctY(dataMax)}
           kind="high"
-          label={`High ${gp(max)}`}
+          label={`High ${gp(dataMax)}`}
           sub={fmtTime(series[highIdx]!.t)}
           preferRight={highIdx / (series.length - 1) < 0.55}
         />
         <Marker
           left={pctX(lowIdx)}
-          top={pctY(min)}
+          top={pctY(dataMin)}
           kind="low"
-          label={`Low ${gp(min)}`}
+          label={`Low ${gp(dataMin)}`}
           sub={fmtTime(series[lowIdx]!.t)}
           preferRight={lowIdx / (series.length - 1) < 0.55}
         />
