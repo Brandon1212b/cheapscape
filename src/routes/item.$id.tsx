@@ -194,12 +194,6 @@ function ItemPage() {
 
           {eq && <EquipmentPanel eq={eq} />}
 
-          <WikiRecommendedPanel
-            loading={wikiRec.isLoading}
-            uses={wikiRec.data?.uses ?? []}
-            wikiHref={`https://oldschool.runescape.wiki/w/${encodeURIComponent(row.name.replace(/ /g, "_"))}#Used_in_recommended_equipment`}
-          />
-
           <section className="panel relative mt-4 p-5 sm:p-6">
             <div
               className="absolute right-4 top-4 z-10 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:right-5 sm:top-5"
@@ -289,6 +283,12 @@ function ItemPage() {
             </a>
           </section>
 
+          <WikiRecommendedPanel
+            loading={wikiRec.isLoading}
+            uses={wikiRec.data?.uses ?? []}
+            wikiHref={`https://oldschool.runescape.wiki/w/${encodeURIComponent(row.name.replace(/ /g, "_"))}#Used_in_recommended_equipment`}
+          />
+
           <footer className="mt-10 border-t border-border/60 pt-6 text-xs text-muted-foreground">
             Price data from the OSRS Wiki real-time Grand Exchange API. Not affiliated with Jagex.
           </footer>
@@ -308,61 +308,47 @@ function WikiRecommendedPanel({
   wikiHref: string;
 }) {
   if (loading) {
-    return <div className="panel mt-4 h-28 animate-pulse opacity-60" />;
+    return <div className="panel mt-4 h-24 animate-pulse opacity-60" />;
   }
   if (!uses.length) return null;
 
-  const first = uses.filter((u) => u.rank === 1);
-  const second = uses.filter((u) => u.rank === 2);
+  const rows = [...uses].sort((a, b) => a.rank - b.rank);
 
   return (
-    <section className="panel mt-4 p-5 sm:p-6">
-      <h2 className="text-lg font-semibold">Used in recommended equipment</h2>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Rank 1 and 2 slots from the OSRS Wiki. Refreshes at most once a day.
-      </p>
-      <div className="mt-3 space-y-3">
-        {first.length > 0 && <RankList rank={1} uses={first} />}
-        {second.length > 0 && <RankList rank={2} uses={second} />}
+    <section className="panel mt-4 p-3">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Wiki rank 1–2</h2>
+        <a
+          href={wikiHref}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+        >
+          Wiki <ExternalLink className="size-3" />
+        </a>
       </div>
-      <a
-        href={wikiHref}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-      >
-        Full list on the wiki <ExternalLink className="size-3.5" />
-      </a>
+      <div className="max-h-40 overflow-y-auto overscroll-contain pr-1">
+        <ul className="divide-y divide-border/40">
+          {rows.map((u) => (
+            <li key={`${u.rank}-${u.href}-${u.style ?? ""}-${u.table}`}>
+              <a
+                href={u.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-baseline gap-2 py-1 text-xs hover:bg-secondary/40"
+              >
+                <span className="w-3 shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">{u.rank}</span>
+                <span className="min-w-0 truncate">
+                  <span className="font-medium text-foreground">{u.method}</span>
+                  {u.style && <span className="text-muted-foreground"> ({u.style})</span>}
+                  {u.table === "special" && <span className="text-muted-foreground"> spec</span>}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
-  );
-}
-
-function RankList({ rank, uses }: { rank: 1 | 2; uses: WikiRecUse[] }) {
-  return (
-    <div>
-      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Rank {rank}
-        {uses.some((u) => u.table === "special") ? " · includes special attack" : ""}
-      </div>
-      <ul className="space-y-1">
-        {uses.map((u) => (
-          <li key={`${u.rank}-${u.href}-${u.style ?? ""}-${u.table}`}>
-            <a
-              href={u.href}
-              target="_blank"
-              rel="noreferrer"
-              className="block rounded-md px-2 py-1.5 text-sm hover:bg-secondary/50"
-            >
-              <span className="font-medium text-foreground">{u.method}</span>
-              {u.style && <span className="text-muted-foreground"> ({u.style})</span>}
-              {u.table === "special" && (
-                <span className="ml-1 text-[10px] uppercase tracking-wide text-muted-foreground">spec</span>
-              )}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
