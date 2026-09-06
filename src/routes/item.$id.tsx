@@ -166,17 +166,8 @@ function ItemPage() {
     : "";
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6">
-      <button
-        type="button"
-        onClick={goBack}
-        aria-label="Back"
-        className="-ml-2 inline-flex size-11 items-center justify-center rounded-full text-foreground hover:bg-secondary/60"
-      >
-        <ChevronLeft className="size-6" />
-      </button>
-
-      {detail.isLoading && <div className="panel mt-4 h-[520px] animate-pulse opacity-60" />}
+    <main className="mx-auto w-full max-w-5xl px-3 pb-24 pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-6">
+      {detail.isLoading && <div className="panel mt-2 h-[520px] animate-pulse opacity-60" />}
 
       {detail.isError && (
         <p className="mt-8 text-sm text-destructive">Couldn't load this item's price history.</p>
@@ -184,86 +175,92 @@ function ItemPage() {
 
       {row && d && (
         <>
-          <header className="panel mt-2 flex flex-wrap items-start gap-4 p-4 sm:p-5">
+          <header className="panel mt-1 flex items-start gap-2 p-2.5">
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="Back"
+              className="-ml-0.5 mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-secondary/60"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
             <WikiImage
               icon={row.icon}
               alt={row.name}
-              width={48}
-              height={48}
+              width={32}
+              height={32}
               lazy={false}
-              className="size-12 drop-shadow"
+              className="mt-0.5 size-8 shrink-0 drop-shadow"
             />
             <div className="min-w-0 flex-1">
-              <h1 className="font-sans text-2xl font-bold leading-tight sm:text-3xl">{row.name}</h1>
-              <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                {row.examine}
-                {" · "}
-                {row.members ? "Members" : "F2P"}
-                {" · "}
-                {row.limit ? `Limit ${formatCompact(row.limit)}` : "No limit"}
-                {" · "}
-                {timeAgo(row.updated)}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold tabular-nums gold-text">{gp(price)}</div>
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="min-w-0 font-sans text-base font-bold leading-tight sm:text-lg">{row.name}</h1>
+                <div className="shrink-0 text-right">
+                  <div className="text-xl font-bold tabular-nums leading-none gold-text sm:text-2xl">{gp(price)}</div>
+                  <span
+                    className="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                    style={{ background: `var(--${signal.token})`, color: `var(--${signal.token}-foreground)` }}
+                  >
+                    {signal.label}
+                  </span>
+                </div>
+              </div>
               {cheapPct != null && (
-                <div className="text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
                   {d.trend!.percentile <= 50
                     ? `Cheaper than ${cheapPct}% of 180 days`
                     : `Richer than ${d.trend!.percentile}% of 180 days`}
-                </div>
+                </p>
               )}
-              <div className="mt-1.5 space-y-0.5 text-xs tabular-nums">
-                <div className="flex items-baseline justify-end gap-2">
-                  <span className="text-muted-foreground">Buy</span>
-                  <span className="font-semibold text-foreground">{gp(row.high)}</span>
-                </div>
-                <div className="flex items-baseline justify-end gap-2">
-                  <span className="text-muted-foreground">Sell</span>
-                  <span className="font-semibold text-foreground">{gp(row.low)}</span>
-                </div>
+              <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
+                Buy <span className="font-semibold text-foreground">{gp(row.high)}</span>
+                {" · "}
+                Sell <span className="font-semibold text-foreground">{gp(row.low)}</span>
                 {row.high != null && row.low != null && row.high !== row.low && (
-                  <div className="text-[11px] text-muted-foreground">Spread {gp(row.high - row.low)}</div>
+                  <>
+                    {" · "}
+                    Spr {gp(row.high - row.low)}
+                  </>
                 )}
+              </p>
+              <p className="text-[11px] tabular-nums text-muted-foreground">
                 {row.highalch != null && (
-                  <div
-                    className="text-[11px] tabular-nums"
+                  <span
                     style={{
                       color:
                         alchVsBuy == null
-                          ? "var(--muted-foreground)"
+                          ? undefined
                           : alchVsBuy > 0
                             ? "var(--deal)"
                             : alchVsBuy < 0
                               ? "var(--steep)"
-                              : "var(--muted-foreground)",
+                              : undefined,
                     }}
                   >
-                    High alch {gp(row.highalch)}
-                    {alchVsBuy != null && alchVsBuy !== 0
-                      ? ` (${alchVsBuy > 0 ? "+" : ""}${gp(alchVsBuy)} vs buy)`
-                      : ""}
-                  </div>
+                    Alch {gp(row.highalch)}
+                    {alchVsBuy != null && alchVsBuy !== 0 ? ` (${alchVsBuy > 0 ? "+" : ""}${gp(alchVsBuy)})` : ""}
+                  </span>
                 )}
                 {row.volume != null && (
-                  <div className="text-muted-foreground">24h vol {formatCompact(row.volume)}</div>
+                  <>
+                    {row.highalch != null ? " · " : ""}
+                    Vol {formatCompact(row.volume)}
+                  </>
                 )}
-              </div>
-              <span
-                className="mt-1.5 inline-block rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide"
-                style={{ background: `var(--${signal.token})`, color: `var(--${signal.token}-foreground)` }}
-              >
-                {signal.label}
-              </span>
+                {" · "}
+                {row.members ? "Mem" : "F2P"}
+                {row.limit ? ` · Lim ${formatCompact(row.limit)}` : ""}
+                {" · "}
+                {timeAgo(row.updated)}
+              </p>
             </div>
           </header>
 
           {eq && <EquipmentPanel eq={eq} />}
 
-          <section className="panel relative mt-4 p-5 sm:p-6">
+          <section className="panel relative mt-2 p-3 sm:p-5">
             <div
-              className="absolute right-4 top-4 z-10 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:right-5 sm:top-5"
+              className="absolute right-3 top-3 z-10 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums sm:right-5 sm:top-5"
               style={{
                 background:
                   d.change > 0
@@ -278,21 +275,21 @@ function ItemPage() {
               {d.change}%
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 pr-16">
-              <h2 className="text-lg font-semibold">
+            <div className="flex flex-wrap items-center justify-between gap-2 pr-14">
+              <h2 className="text-sm font-semibold sm:text-lg">
                 Price over {d.rangeLabel}
                 {d.volumeTotal > 0 && (
-                  <span className="ml-2 text-xs font-medium text-muted-foreground">
+                  <span className="ml-2 text-[11px] font-medium text-muted-foreground">
                     · vol {formatCompact(d.volumeTotal)}
                   </span>
                 )}
               </h2>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 {RANGES.map((r) => (
                   <button
                     key={r.key}
                     onClick={() => setChartRange(r.key)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
                       range === r.key
                         ? "bg-primary text-primary-foreground"
                         : "bg-secondary/60 text-muted-foreground hover:text-foreground"
@@ -304,7 +301,7 @@ function ItemPage() {
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-2">
               <PriceChart series={d.series} tone={signal.token} intraday={range === "1d" || range === "1w"} />
             </div>
           </section>
@@ -317,7 +314,7 @@ function ItemPage() {
             wikiHref={wikiItemHref}
           />
 
-          <footer className="mt-10 border-t border-border/60 pt-6 text-xs text-muted-foreground">
+          <footer className="mt-8 border-t border-border/60 pt-4 text-xs text-muted-foreground">
             Price data from the OSRS Wiki real-time Grand Exchange API. Not affiliated with Jagex.
           </footer>
         </>
@@ -352,7 +349,7 @@ function WhyBuyPanel({
   }, [uses]);
 
   return (
-    <section className="panel mt-4 p-3">
+    <section className="panel mt-2 p-3">
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
         <a
@@ -433,7 +430,7 @@ function EquipmentPanel({ eq }: { eq: EquipmentStats }) {
   ];
 
   return (
-    <section className="panel mt-4 px-3 py-2 sm:px-4">
+    <section className="panel mt-2 px-3 py-1.5 sm:px-4">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
