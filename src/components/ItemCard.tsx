@@ -3,6 +3,7 @@ import { Sparkline } from "@/components/Sparkline";
 import { WikiImage } from "@/components/WikiImage";
 import type { PriceRow, Trend } from "@/lib/osrs.server";
 import { gp, signalOf } from "@/lib/format";
+import { lastHomeRange } from "@/lib/tab-memory";
 
 const SCROLL_KEY = "ge-watch-home-scroll";
 
@@ -39,6 +40,7 @@ export function ItemCard({
       <Link
         to="/item/$id"
         params={{ id: String(row.id) }}
+        search={{ range: lastHomeRange() }}
         className="absolute inset-0 z-10 rounded-[inherit]"
         aria-label={`View ${row.name} price history`}
         onClick={() => {
