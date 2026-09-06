@@ -3,7 +3,8 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ExternalLink, RefreshCw } from "lucide-react";
-import { fetchItemDetail } from "@/lib/osrs.functions";
+import { fetchItemDetail, fetchWikiRecommended } from "@/lib/osrs.functions";
+import type { WikiRecUse } from "@/lib/wiki-recommended";
 import type { EquipmentStats, RangeKey } from "@/lib/osrs.server";
 import { CATALOG } from "@/lib/osrs-catalog";
 import { PriceChart } from "@/components/PriceChart";
@@ -71,6 +72,7 @@ function ItemPage() {
   const router = useRouter();
   const [range, setRange] = useState<RangeKey>("6m");
   const getDetail = useServerFn(fetchItemDetail);
+  const getWikiRec = useServerFn(fetchWikiRecommended);
 
   const detail = useQuery({
     queryKey: ["item", id, range],
@@ -84,6 +86,13 @@ function ItemPage() {
   const group = row ? groupFor(row.name) : undefined;
   const price = row ? (row.high ?? row.low) : null;
   const eq = d?.equipment ?? null;
+
+  const wikiRec = useQuery({
+    queryKey: ["wiki-rec", row?.name],
+    queryFn: () => getWikiRec({ data: { name: row!.name } }),
+    enabled: Boolean(row?.name),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
   const goBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -185,6 +194,12 @@ function ItemPage() {
 
           {eq && <EquipmentPanel eq={eq} />}
 
+          <WikiRecommendedPanel
+            loading={wikiRec.isLoading}
+            uses={wikiRec.data?.uses ?? []}
+            wikiHref={`https://oldschool.runescape.wiki/w/${encodeURIComponent(row.name.replace(/ /g, "_"))}#Used_in_recommended_equipment`}
+          />
+
           <section className="panel relative mt-4 p-5 sm:p-6">
             <div
               className="absolute right-4 top-4 z-10 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:right-5 sm:top-5"
@@ -280,6 +295,74 @@ function ItemPage() {
         </>
       )}
     </main>
+  );
+}
+
+function WikiRecommendedPanel({
+  loading,
+  uses,
+  wikiHref,
+}: {
+  loading: boolean;
+  uses: WikiRecUse[];
+  wikiHref: string;
+}) {
+  if (loading) {
+    return <div className="panel mt-4 h-28 animate-pulse opacity-60" />;
+  }
+  if (!uses.length) return null;
+
+  const first = uses.filter((u) => u.rank === 1);
+  const second = uses.filter((u) => u.rank === 2);
+
+  return (
+    <section className="panel mt-4 p-5 sm:p-6">
+      <h2 className="text-lg font-semibold">Used in recommended equipment</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Rank 1 and 2 slots from the OSRS Wiki. Refreshes at most once a day.
+      </p>
+      <div className="mt-3 space-y-3">
+        {first.length > 0 && <RankList rank={1} uses={first} />}
+        {second.length > 0 && <RankList rank={2} uses={second} />}
+      </div>
+      <a
+        href={wikiHref}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+      >
+        Full list on the wiki <ExternalLink className="size-3.5" />
+      </a>
+    </section>
+  );
+}
+
+function RankList({ rank, uses }: { rank: 1 | 2; uses: WikiRecUse[] }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Rank {rank}
+        {uses.some((u) => u.table === "special") ? " · includes special attack" : ""}
+      </div>
+      <ul className="space-y-1">
+        {uses.map((u) => (
+          <li key={`${u.rank}-${u.href}-${u.style ?? ""}-${u.table}`}>
+            <a
+              href={u.href}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-md px-2 py-1.5 text-sm hover:bg-secondary/50"
+            >
+              <span className="font-medium text-foreground">{u.method}</span>
+              {u.style && <span className="text-muted-foreground"> ({u.style})</span>}
+              {u.table === "special" && (
+                <span className="ml-1 text-[10px] uppercase tracking-wide text-muted-foreground">spec</span>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
