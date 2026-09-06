@@ -1,6 +1,6 @@
 # Cheapscape
 
-Live site: [osrs-item-tracker.vercel.app](https://osrs-item-tracker.vercel.app)
+Live site: [cheap-scape.vercel.app](https://cheap-scape.vercel.app/)
 
 A mobile-first OSRS tool for regular players — not flippers. It tracks **live Grand Exchange prices** on the gear and supplies you actually buy, and ranks **wiki-style training methods** by XP/hour, GP/hour, and what that training costs *you* given how much GP you make per hour.
 
@@ -85,7 +85,7 @@ Rates come from wiki-audited method tables in `src/lib/*-methods.ts` and `src/li
 | Data | TanStack Query (snapshot refetch every 2 minutes) |
 | Charts | Recharts |
 | Build | Vite 8, TypeScript |
-| Deploy | Vercel ([osrs-item-tracker.vercel.app](https://osrs-item-tracker.vercel.app)) |
+| Deploy | Vercel ([cheap-scape.vercel.app](https://cheap-scape.vercel.app/)) |
 | Accounts | Off — no Supabase required |
 
 ### Data sources
@@ -103,8 +103,8 @@ Server-side fetch + short TTL caches live in `src/lib/osrs.server.ts` and are ex
 Need Node.js 22+ and npm.
 
 ```sh
-git clone https://github.com/Brandon1212b/osrs-item-tracker.git
-cd osrs-item-tracker
+git clone https://github.com/Brandon1212b/cheapscape.git
+cd cheapscape
 npm i
 npm run dev
 ```
