@@ -77,18 +77,21 @@ const METHOD_SKILLS: {
 
 const METHOD_SKILL_KEYS = new Set(METHOD_SKILLS.map((s) => s.key));
 
+const TOP_BAR =
+  "sticky top-0 z-30 -mx-3 flex items-center gap-2 border-b border-border/40 bg-background/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4 pointer-events-auto isolate";
+
 export const Route = createFileRoute("/methods")({
   validateSearch: (search: Record<string, unknown>): MethodsSearch =>
     methodsSearchSchema.parse(search),
   head: () => ({
     meta: [
-      { title: "Skilling Methods — GE Watch" },
+      { title: "Skilling Methods — Cheapscape" },
       {
         name: "description",
         content:
           "OSRS skilling training method guides with live Grand Exchange prices, XP/hr, GP/hr, and personalised cost scores.",
       },
-      { property: "og:title", content: "Skilling Methods — GE Watch" },
+      { property: "og:title", content: "Skilling Methods — Cheapscape" },
       {
         property: "og:description",
         content:
@@ -175,55 +178,52 @@ function MethodsPage() {
 
   return (
     <MethodSkillsNavProvider value={skillsNav}>
-      <main className="mx-auto max-w-6xl px-3 pb-16 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
-        <div className="flex flex-col gap-2 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <User className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={rsnDraft}
-                onChange={(e) => setRsnDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") loadRsn(rsnDraft);
-                }}
-                placeholder="RSN"
-                className="h-8 w-36 pl-7 text-base sm:w-44"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
+      <main className="mx-auto w-full max-w-7xl px-3 pb-16 pt-0 sm:px-4">
+        <div className={TOP_BAR}>
+          <div className="relative min-w-0 flex-1">
+            <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={rsnDraft}
+              onChange={(e) => setRsnDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") loadRsn(rsnDraft);
+              }}
+              placeholder="RSN"
+              className="h-11 pl-9 pr-2 text-base"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => loadRsn(rsnDraft)}
+            className="inline-flex h-11 shrink-0 items-center rounded-full border border-border/60 bg-secondary/40 px-3 text-sm font-medium hover:bg-secondary/60"
+          >
+            Load
+          </button>
+          {activeRsn && (
             <button
               type="button"
-              onClick={() => loadRsn(rsnDraft)}
-              className="h-8 rounded-md border border-border/60 bg-secondary/40 px-2.5 text-xs font-medium hover:bg-secondary/60"
+              onClick={clearRsn}
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground hover:bg-secondary/50"
+              title="Clear RSN"
             >
-              Load
+              <X className="size-4" />
             </button>
-            {activeRsn && (
-              <button
-                type="button"
-                onClick={clearRsn}
-                className="inline-flex size-8 items-center justify-center rounded-md border border-border/60 text-muted-foreground hover:bg-secondary/50"
-                title="Clear RSN"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-            <div className="ml-auto">
-              <WikiSweepButton />
-            </div>
+          )}
+          <div className="ml-auto shrink-0">
+            <WikiSweepButton />
           </div>
-
-          {playerQuery.isFetching && (
-            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" />
-              Looking up hiscores…
-            </p>
-          )}
-          {playerQuery.isError && (
-            <p className="text-[11px] text-destructive">Player not found on hiscores.</p>
-          )}
         </div>
+        {playerQuery.isFetching && (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Loader2 className="size-3 animate-spin" />
+            Looking up hiscores…
+          </p>
+        )}
+        {playerQuery.isError && (
+          <p className="mt-2 text-[11px] text-destructive">Player not found on hiscores.</p>
+        )}
 
         {!SelectedPanel && (
           <>
