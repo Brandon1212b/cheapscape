@@ -23,6 +23,7 @@ import { FiremakingMethodsPanel } from "@/components/FiremakingMethods";
 import { ThievingMethodsPanel } from "@/components/ThievingMethods";
 import { HunterMethodsPanel } from "@/components/HunterMethods";
 import { SailingMethodsPanel } from "@/components/SailingMethods";
+import { MethodsRsnBar } from "@/components/MethodsRsnBar";
 import type { PriceRow, Trend } from "@/lib/osrs.server";
 import type { PlayerSkills } from "@/lib/player-stats";
 import { readLastSkill, writeLastSkill } from "@/lib/tab-memory";
@@ -74,6 +75,9 @@ const METHOD_SKILLS: {
 ];
 
 const METHOD_SKILL_KEYS = new Set(METHOD_SKILLS.map((s) => s.key));
+
+const TOP_BAR =
+  "sticky top-0 z-30 -mx-3 flex flex-wrap items-center gap-2 border-b border-border/40 bg-background/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4 pointer-events-auto isolate";
 
 export const Route = createFileRoute("/methods")({
   validateSearch: (search: Record<string, unknown>): MethodsSearch =>
@@ -172,7 +176,11 @@ function MethodsPage() {
 
   return (
     <MethodSkillsNavProvider value={skillsNav}>
-      <main className="mx-auto max-w-6xl px-3 pb-16 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
+      <main className="mx-auto w-full max-w-7xl px-3 pb-16 pt-0 sm:px-4">
+        <div className={TOP_BAR}>
+          <MethodsRsnBar />
+        </div>
+
         {!SelectedPanel && (
           <>
             <FilterPopover
