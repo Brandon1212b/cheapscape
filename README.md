@@ -58,7 +58,7 @@ Activity-type chips narrow a skill (Battlestaves, Blast Furnace, Cannonballs, He
 
 Star items from the catalog. Set a target GP price or a % drop from the 6-month high. Hits highlight as alerts.
 
-Saved in **this browser only** (`localStorage`). Clearing site data or switching devices resets it. Account sync is not wired up yet.
+Saved in **this browser only** (`localStorage`). Clearing site data or switching devices resets it. Cloud accounts are off.
 
 ## How method cost works
 
@@ -87,7 +87,7 @@ Rates come from wiki-audited method tables in `src/lib/*-methods.ts` and `src/li
 | Charts | Recharts |
 | Build | Vite 8, TypeScript |
 | Deploy | Vercel ([osrs-item-tracker.vercel.app](https://osrs-item-tracker.vercel.app)) |
-| Auth (partial) | Supabase OAuth on `/auth` — watchlist is still local |
+| Accounts | Off — no Supabase required |
 
 ### Data sources
 
@@ -119,15 +119,7 @@ npm run lint
 npm run format
 ```
 
-Optional env (already used in production; copy into `.env` if you need auth locally):
-
-```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_PUBLISHABLE_KEY=
-VITE_SUPABASE_PROJECT_ID=
-```
-
-Do not commit secrets. The publishable Supabase key is safe to expose in the client; service-role keys are not used here.
+No environment variables are required for prices or methods.
 
 ## Routes
 
@@ -137,7 +129,7 @@ Do not commit secrets. The publishable Supabase key is safe to expose in the cli
 | `/item/$id` | Item detail + chart |
 | `/methods` | Skilling methods |
 | `/watchlist` | Local price alerts |
-| `/auth` | Google sign-in (Supabase) |
+| `/auth` | Accounts disabled |
 
 Bottom tab bar: **Prices** and **Methods**, plus a global search control. Filter / sort / selected skill persist in the URL (and last skill is remembered).
 
@@ -155,8 +147,7 @@ src/
     *-activities.ts         Minigame / activity methods
     method-rank.ts          Cost and net-value ranking
     watchlist.ts            localStorage watchlist
-  hooks/            market data, hiscores, auth, mobile
-supabase/           project stub (auth only for now)
+  hooks/            market data, hiscores, mobile
 ```
 
 ## Product intent
