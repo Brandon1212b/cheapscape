@@ -317,12 +317,12 @@ function WikiRecommendedPanel({
   return (
     <section className="panel mt-4 p-3">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Wiki rank 1–2</h2>
+        <h2 className="text-sm font-semibold">Used in recommended equipment</h2>
         <a
           href={wikiHref}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+          className="inline-flex shrink-0 items-center gap-1 text-[11px] text-primary hover:underline"
         >
           Wiki <ExternalLink className="size-3" />
         </a>
