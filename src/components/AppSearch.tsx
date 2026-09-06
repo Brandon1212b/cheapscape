@@ -8,7 +8,7 @@ import { useMarketData } from "@/hooks/useMarketData";
 import { CATALOG } from "@/lib/osrs-catalog";
 import { itemSearchText } from "@/lib/item-search-aliases";
 import { METHOD_SKILL_SEARCH, skillSearchText } from "@/lib/method-skill-search";
-import { lastTabSearch } from "@/lib/tab-memory";
+import { lastHomeRange, lastTabSearch } from "@/lib/tab-memory";
 import { Input } from "@/components/ui/input";
 
 type Hit =
@@ -111,7 +111,11 @@ export function AppSearch() {
                           search: { ...prev, skill: hit.key } as never,
                         });
                       } else {
-                        void navigate({ to: "/item/$id", params: { id: String(hit.id) } });
+                        void navigate({
+                          to: "/item/$id",
+                          params: { id: String(hit.id) },
+                          search: { range: lastHomeRange() },
+                        });
                       }
                       close();
                     }}
