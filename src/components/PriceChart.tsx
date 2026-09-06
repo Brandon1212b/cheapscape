@@ -110,6 +110,9 @@ export function PriceChart({
   const fmtTime = (t: number) =>
     new Date(t).toLocaleString(undefined, intraday ? { hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric" });
 
+  const volIdx = hover ?? series.length - 1;
+  const volNow = series[volIdx]?.v ?? 0;
+  const volBarH = maxVol > 0 ? (volNow / maxVol) * volH : 0;
   const active = hover != null ? series[hover] : null;
 
   const priceTicks = niceTicks(axisMin, axisMax, 5).map((value) => ({
@@ -175,7 +178,7 @@ export function PriceChart({
               const bh = maxVol > 0 ? (v / maxVol) * volH : 0;
               const bx = x(i) - barW / 2;
               const by = h - padB - bh;
-              const activeBar = hover === i;
+              const activeBar = volIdx === i;
               return (
                 <rect
                   key={i}
@@ -215,10 +218,13 @@ export function PriceChart({
 
         {hasVolume && maxVol > 0 && (
           <div
-            className="pointer-events-none absolute right-0 z-[2] rounded bg-background/80 px-1 py-0.5 text-[11px] font-semibold tabular-nums leading-none text-muted-foreground"
-            style={{ top: pctOfH(h - padB - volH) }}
+            className="pointer-events-none absolute z-[2] -translate-x-1/2 -translate-y-full rounded bg-background/90 px-1 py-0.5 text-[11px] font-semibold tabular-nums leading-none text-foreground"
+            style={{
+              left: pctX(volIdx),
+              top: pctOfH(h - padB - volBarH),
+            }}
           >
-            {axisGp(maxVol)} vol
+            {axisGp(volNow)} vol
           </div>
         )}
 
