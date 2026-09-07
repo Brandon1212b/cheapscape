@@ -1,6 +1,5 @@
 import { Loader2, User, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { WikiSweepButton } from "@/components/WikiSweepButton";
 import { usePlayerLookup } from "@/hooks/usePlayerLookup";
 
 export function MethodsRsnBar() {
@@ -39,9 +38,6 @@ export function MethodsRsnBar() {
           <X className="size-4" />
         </button>
       )}
-      <div className="ml-auto shrink-0">
-        <WikiSweepButton />
-      </div>
       {playerQuery.isFetching && (
         <p className="basis-full flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
