@@ -31,13 +31,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Cheapscape tracks live Grand Exchange prices and wiki skilling methods so you can buy gear on a dip and train efficiently.",
+          "Cheapscape shows OSRS gear that is cheap today and ranks skilling methods by opportunity cost against your money-making rate.",
       },
       { property: "og:title", content: "Cheapscape — OSRS prices & skilling methods" },
       {
         property: "og:description",
         content:
-          "See this month's biggest GE fallers and top training methods for each skill.",
+          "Buy gear on a real dip. Train with methods scored against what your time is worth.",
       },
     ],
   }),
@@ -110,8 +110,7 @@ function LandingPage() {
         />
         <h1 className="mt-3 font-sans text-2xl font-bold tracking-tight sm:text-3xl">Cheapscape</h1>
         <p className="mt-1.5 max-w-md text-sm leading-snug text-muted-foreground">
-          Live Grand Exchange prices and wiki-backed skilling methods — buy gear on a dip and pick
-          an efficient way to train.
+          Gear that's cheap today — and skilling methods ranked by opportunity cost, not just XP/h.
         </p>
       </header>
 
@@ -217,7 +216,7 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </Link>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Live GE prices for gear and supplies.
+            See which gear is cheap today versus its recent range.
           </p>
         </section>
 
@@ -286,7 +285,7 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </button>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Compare XP/h, GP/h, and training cost.
+            Ranked by opportunity cost against what your time is worth.
           </p>
         </section>
       </div>
