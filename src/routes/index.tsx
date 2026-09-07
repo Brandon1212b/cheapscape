@@ -7,7 +7,7 @@ import { useMarketData } from "@/hooks/useMarketData";
 import { compactNum, gp } from "@/lib/format";
 import { homeMethodRates } from "@/lib/home-highlights";
 import { endgameFallers } from "@/lib/home-fallers";
-import { lastTabSearch } from "@/lib/tab-memory";
+import { lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import type { PriceRow } from "@/lib/osrs.server";
 
 export type { HomeSearch } from "./prices";
@@ -21,7 +21,6 @@ const PRICE_SEARCH_KEYS = [
   "slot",
   "tier",
   "set",
-  "skill",
   "supply",
 ] as const;
 
@@ -75,7 +74,15 @@ function LandingPage() {
     return map;
   }, [snapshot.data]);
 
-  const methods = useMemo(() => homeMethodRates(rowsByName), [rowsByName]);
+  const savedMethods = lastTabSearch("/methods");
+  const moneyPerHour =
+    typeof savedMethods.g === "number" && Number.isFinite(savedMethods.g)
+      ? savedMethods.g
+      : 2_000_000;
+  const methods = useMemo(
+    () => homeMethodRates(rowsByName, moneyPerHour),
+    [rowsByName, moneyPerHour],
+  );
 
   const pricesSearch = {
     ...lastTabSearch("/prices"),
@@ -83,6 +90,12 @@ function LandingPage() {
     tier: "end",
     sort: "losers",
     range: "1m",
+  };
+
+  const openSkill = (skill: string) => {
+    writeLastSkill(skill);
+    writeTabSearch("/methods", { skill });
+    void navigate({ to: "/methods", search: { skill } });
   };
 
   return (
@@ -209,7 +222,7 @@ function LandingPage() {
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top methods</h2>
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              XP / GP
+              Best cost
             </span>
           </div>
 
@@ -218,7 +231,12 @@ function LandingPage() {
               <li key={row.skill}>
                 <Link
                   to="/methods"
-                  search={{ skill: row.skill } as never}
+                  search={{ skill: row.skill }}
+                  href={`/methods?skill=${encodeURIComponent(row.skill)}`}
+                  onClick={() => {
+                    writeLastSkill(row.skill);
+                    writeTabSearch("/methods", { skill: row.skill });
+                  }}
                   className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
                 >
                   <WikiImage
@@ -242,7 +260,7 @@ function LandingPage() {
                     </div>
                     <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
                       {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "— xp/h"}
-                      {" · "}
+                      {" \u00b7 "}
                       <span
                         style={{
                           color:
@@ -262,15 +280,15 @@ function LandingPage() {
             ))}
           </ul>
 
-          <Link
-            to="/methods"
-            search={lastTabSearch("/methods") as never}
+          <button
+            type="button"
+            onClick={() => openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")}
             className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Pickaxe className="size-4" />
             Skilling methods
             <ArrowRight className="size-4" />
-          </Link>
+          </button>
         </section>
       </div>
     </main>
