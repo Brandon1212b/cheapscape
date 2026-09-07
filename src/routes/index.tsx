@@ -226,9 +226,9 @@ function LandingPage() {
             </span>
           </div>
 
-          <ul className="divide-y divide-border/40">
+          <ul className="grid grid-cols-2 gap-x-2 divide-y divide-border/40">
             {methods.map((row) => (
-              <li key={row.skill}>
+              <li key={row.skill} className="min-w-0">
                 <Link
                   to="/methods"
                   search={{ skill: row.skill }}
@@ -237,7 +237,7 @@ function LandingPage() {
                     writeLastSkill(row.skill);
                     writeTabSearch("/methods", { skill: row.skill });
                   }}
-                  className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
+                  className="flex items-start gap-2 py-1.5 hover:bg-secondary/30"
                 >
                   <WikiImage
                     icon={row.skillIcon}
@@ -245,21 +245,12 @@ function LandingPage() {
                     width={22}
                     height={22}
                     lazy={false}
-                    className="size-5 shrink-0"
+                    className="mt-0.5 size-5 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <WikiImage
-                        icon={row.methodIcon}
-                        alt=""
-                        width={16}
-                        height={16}
-                        className="size-4 shrink-0 opacity-80"
-                      />
-                      <span className="truncate text-sm font-medium">{row.method}</span>
-                    </div>
-                    <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
-                      {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "— xp/h"}
+                    <span className="block truncate text-xs font-medium leading-tight">{row.method}</span>
+                    <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
+                      {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "—"}
                       {" \u00b7 "}
                       <span
                         style={{
@@ -271,7 +262,7 @@ function LandingPage() {
                                 : "var(--steep)",
                         }}
                       >
-                        {row.gpPerHour != null ? `${gp(row.gpPerHour)} gp/h` : "— gp/h"}
+                        {row.gpPerHour != null ? `${gp(row.gpPerHour)}` : "—"}
                       </span>
                     </p>
                   </div>
@@ -282,7 +273,9 @@ function LandingPage() {
 
           <button
             type="button"
-            onClick={() => openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")}
+            onClick={() =>
+              openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")
+            }
             className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Pickaxe className="size-4" />
