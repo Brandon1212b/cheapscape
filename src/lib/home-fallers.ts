@@ -91,10 +91,6 @@ export function endgameFallers(
 ): HomeFaller[] {
   const catalog = catalogByName();
   const families = buildSetFamilies(catalog);
-  const pieceToFamily = new Map<string, SetFamily>();
-  for (const family of families) {
-    for (const piece of family.pieces) pieceToFamily.set(piece, family);
-  }
 
   const rowsByName = new Map<string, PriceRow>();
   for (const row of rows) {
