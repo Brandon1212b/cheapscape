@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PricesRouteImport } from './routes/prices'
 import { Route as MethodsRouteImport } from './routes/methods'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
@@ -18,6 +19,11 @@ import { Route as ItemIdRouteImport } from './routes/item.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricesRoute = PricesRouteImport.update({
+  id: '/prices',
+  path: '/prices',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MethodsRoute = MethodsRouteImport.update({
@@ -43,6 +49,7 @@ const ItemIdRoute = ItemIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/prices': typeof PricesRoute
   '/methods': typeof MethodsRoute
   '/auth': typeof AuthRoute
   '/watchlist': typeof WatchlistRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/prices': typeof PricesRoute
   '/methods': typeof MethodsRoute
   '/auth': typeof AuthRoute
   '/watchlist': typeof WatchlistRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/prices': typeof PricesRoute
   '/methods': typeof MethodsRoute
   '/auth': typeof AuthRoute
   '/watchlist': typeof WatchlistRoute
@@ -65,14 +74,15 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/methods' | '/auth' | '/watchlist' | '/item/$id'
+  fullPaths: '/' | '/prices' | '/methods' | '/auth' | '/watchlist' | '/item/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/methods' | '/auth' | '/watchlist' | '/item/$id'
-  id: '__root__' | '/' | '/methods' | '/auth' | '/watchlist' | '/item/$id'
+  to: '/' | '/prices' | '/methods' | '/auth' | '/watchlist' | '/item/$id'
+  id: '__root__' | '/' | '/prices' | '/methods' | '/auth' | '/watchlist' | '/item/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PricesRoute: typeof PricesRoute
   MethodsRoute: typeof MethodsRoute
   AuthRoute: typeof AuthRoute
   WatchlistRoute: typeof WatchlistRoute
@@ -86,6 +96,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prices': {
+      id: '/prices'
+      path: '/prices'
+      fullPath: '/prices'
+      preLoaderRoute: typeof PricesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/methods': {
@@ -121,6 +138,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PricesRoute: PricesRoute,
   MethodsRoute: MethodsRoute,
   AuthRoute: AuthRoute,
   WatchlistRoute: WatchlistRoute,
