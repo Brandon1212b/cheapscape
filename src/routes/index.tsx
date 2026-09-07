@@ -133,14 +133,9 @@ function LandingPage() {
 
           {!snapshot.isLoading && fallers.length > 0 && (
             <ul className="divide-y divide-border/40">
-              {fallers.map((row) => (
-                <li key={row.key}>
-                  <Link
-                    to="/item/$id"
-                    params={{ id: String(row.itemId) }}
-                    search={{ range: "1m" }}
-                    className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
-                  >
+              {fallers.map((row) => {
+                const inner = (
+                  <>
                     <WikiImage
                       icon={row.icon}
                       alt=""
@@ -148,7 +143,14 @@ function LandingPage() {
                       height={22}
                       className="size-5 shrink-0"
                     />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {row.name}
+                      {row.kind === "set" && (
+                        <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          set
+                        </span>
+                      )}
+                    </span>
                     <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">
                       {gp(row.price)}
                     </span>
@@ -158,9 +160,37 @@ function LandingPage() {
                     >
                       {row.change}%
                     </span>
-                  </Link>
-                </li>
-              ))}
+                  </>
+                );
+
+                return (
+                  <li key={row.key}>
+                    {row.kind === "set" ? (
+                      <Link
+                        to="/prices"
+                        search={
+                          {
+                            ...pricesSearch,
+                            q: row.query,
+                          } as never
+                        }
+                        className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/item/$id"
+                        params={{ id: String(row.itemId) }}
+                        search={{ range: "1m" }}
+                        className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
+                      >
+                        {inner}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -188,7 +218,7 @@ function LandingPage() {
               <li key={row.skill}>
                 <Link
                   to="/methods"
-                  search={{ ...lastTabSearch("/methods"), skill: row.skill } as never}
+                  search={{ skill: row.skill } as never}
                   className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
                 >
                   <WikiImage

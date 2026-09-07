@@ -5,6 +5,7 @@ import type { PriceRow, Trend } from "@/lib/osrs.server";
 export type HomeFaller = {
   key: string;
   name: string;
+  query: string;
   icon: string;
   itemId: number;
   price: number;
@@ -15,13 +16,37 @@ export type HomeFaller = {
 type SetFamily = {
   key: string;
   label: string;
+  query: string;
   pieces: string[];
 };
 
 const ARMOUR_SLOTS = new Set(["head", "chest", "legs"]);
 
+/** Known multi-piece endgame armour. Weapons from the same brand stay as singles. */
+const SET_PREFIXES: { test: (n: string) => boolean; key: string; label: string; query: string }[] = [
+  { test: (n) => n.startsWith("torva "), key: "torva", label: "Torva armour", query: "Torva" },
+  { test: (n) => n.startsWith("justiciar "), key: "justiciar", label: "Justiciar armour", query: "Justiciar" },
+  {
+    test: (n) => n.startsWith("inquisitor's ") && !n.includes("mace"),
+    key: "inquisitor",
+    label: "Inquisitor's armour",
+    query: "Inquisitor",
+  },
+  {
+    test: (n) => n.startsWith("masori ") && n.includes("(f)"),
+    key: "masori-f",
+    label: "Masori armour (f)",
+    query: "Masori (f)",
+  },
+  { test: (n) => n.startsWith("masori "), key: "masori", label: "Masori armour", query: "Masori" },
+  { test: (n) => n.startsWith("ancestral "), key: "ancestral", label: "Ancestral robes", query: "Ancestral" },
+  { test: (n) => n.startsWith("virtus "), key: "virtus", label: "Virtus robes", query: "Virtus" },
+  { test: (n) => n.startsWith("oathplate "), key: "oathplate", label: "Oathplate armour", query: "Oathplate" },
+];
+
 function isThirdAge(name: string) {
-  return name.toLowerCase().includes("3rd age");
+  const n = name.toLowerCase();
+  return n.includes("3rd age") || n.includes("3rd-age") || n.includes("third age");
 }
 
 function priceOf(row: PriceRow): number {
@@ -50,38 +75,45 @@ function catalogByName(): Map<string, CatalogItem> {
   return map;
 }
 
-function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
-  const buckets = new Map<string, { label: string; pieces: Set<string> }>();
-
-  const add = (key: string, label: string, name: string) => {
-    const bucket = buckets.get(key) ?? { label, pieces: new Set<string>() };
-    bucket.pieces.add(name.toLowerCase());
-    buckets.set(key, bucket);
-  };
-
+function uniqueCatalogItems(catalog: Map<string, CatalogItem>): CatalogItem[] {
+  const seen = new Set<string>();
+  const out: CatalogItem[] = [];
   for (const item of catalog.values()) {
+    const key = item.name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+function familyFor(name: string): (typeof SET_PREFIXES)[number] | null {
+  const n = name.toLowerCase();
+  return SET_PREFIXES.find((p) => p.test(n)) ?? null;
+}
+
+function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
+  const buckets = new Map<string, { label: string; query: string; pieces: Set<string> }>();
+
+  for (const item of uniqueCatalogItems(catalog)) {
     if (!item.tags.includes("end")) continue;
     if (isThirdAge(item.name)) continue;
     if (!item.tags.some((t) => ARMOUR_SLOTS.has(t))) continue;
-
-    const n = item.name;
-    const lower = n.toLowerCase();
-
-    if (lower.startsWith("torva ")) add("torva", "Torva armour", n);
-    else if (lower.startsWith("justiciar ")) add("justiciar", "Justiciar armour", n);
-    else if (lower.startsWith("inquisitor's ") && !lower.includes("mace")) {
-      add("inquisitor", "Inquisitor's armour", n);
-    } else if (lower.startsWith("masori ") && lower.includes("(f)")) {
-      add("masori-f", "Masori armour (f)", n);
-    } else if (lower.startsWith("masori ")) add("masori", "Masori armour", n);
-    else if (lower.startsWith("ancestral ")) add("ancestral", "Ancestral robes", n);
-    else if (lower.startsWith("virtus ")) add("virtus", "Virtus robes", n);
-    else if (lower.startsWith("oathplate ")) add("oathplate", "Oathplate armour", n);
+    const prefix = familyFor(item.name);
+    if (!prefix) continue;
+    const bucket = buckets.get(prefix.key) ?? {
+      label: prefix.label,
+      query: prefix.query,
+      pieces: new Set<string>(),
+    };
+    bucket.pieces.add(item.name.toLowerCase());
+    bucket.pieces.add(geLookupName(item.name).toLowerCase());
+    buckets.set(prefix.key, bucket);
   }
 
   return [...buckets.entries()]
     .filter(([, b]) => b.pieces.size >= 2)
-    .map(([key, b]) => ({ key, label: b.label, pieces: [...b.pieces] }));
+    .map(([key, b]) => ({ key, label: b.label, query: b.query, pieces: [...b.pieces] }));
 }
 
 export function endgameFallers(
@@ -103,6 +135,7 @@ export function endgameFallers(
 
   const consider = (
     name: string,
+    query: string,
     icon: string,
     itemId: number,
     price: number,
@@ -112,7 +145,7 @@ export function endgameFallers(
   ) => {
     if (!Number.isFinite(change) || change >= 0) return;
     if (price < 1_000) return;
-    out.push({ key, name, icon, itemId, price, change, kind });
+    out.push({ key, name, query, icon, itemId, price, change, kind });
   };
 
   for (const family of families) {
@@ -123,9 +156,13 @@ export function endgameFallers(
       pieces.push(row);
       used.add(piece);
       used.add(row.name.toLowerCase());
+      used.add(geLookupName(row.name).toLowerCase());
     }
     if (pieces.length < 2) {
-      for (const row of pieces) used.delete(row.name.toLowerCase());
+      for (const row of pieces) {
+        used.delete(row.name.toLowerCase());
+        used.delete(geLookupName(row.name).toLowerCase());
+      }
       continue;
     }
 
@@ -146,7 +183,16 @@ export function endgameFallers(
     }
     const setChange =
       base > 0 ? Math.round(((total - base) / base) * 1000) / 10 : worstChange;
-    consider(family.label, worst.icon, worst.id, total, setChange, "set", family.key);
+    consider(
+      family.label,
+      family.query,
+      worst.icon,
+      worst.id,
+      total,
+      setChange,
+      "set",
+      family.key,
+    );
   }
 
   for (const row of rows) {
@@ -155,8 +201,15 @@ export function endgameFallers(
     if (!item) continue;
     if (!item.tags.includes("end")) continue;
     if (isThirdAge(row.name) || isThirdAge(item.name)) continue;
-    if (used.has(row.name.toLowerCase()) || used.has(item.name.toLowerCase())) continue;
+    if (
+      used.has(row.name.toLowerCase()) ||
+      used.has(item.name.toLowerCase()) ||
+      used.has(geLookupName(row.name).toLowerCase())
+    ) {
+      continue;
+    }
     consider(
+      row.name,
       row.name,
       row.icon,
       row.id,
