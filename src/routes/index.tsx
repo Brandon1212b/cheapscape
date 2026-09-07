@@ -109,9 +109,6 @@ function LandingPage() {
           className="size-20 rounded-2xl object-cover shadow-[0_10px_30px_-12px_oklch(0_0_0/0.7)] ring-1 ring-white/10 sm:size-24"
         />
         <h1 className="mt-3 font-sans text-2xl font-bold tracking-tight sm:text-3xl">Cheapscape</h1>
-        <p className="mt-1.5 max-w-md text-sm leading-snug text-muted-foreground">
-          Gear that's cheap today — and skilling methods ranked by opportunity cost, not just XP/h.
-        </p>
       </header>
 
       <div className="mt-6 grid gap-3 md:grid-cols-2">
