@@ -17,7 +17,7 @@ import { usePlayerLookup } from "@/hooks/usePlayerLookup";
 import type { HomeSearch } from "./index";
 import { HomeMain } from "./home-main";
 
-const routeApi = getRouteApi("/");
+const routeApi = getRouteApi("/prices");
 
 type Filter = "all" | "gear" | "skilling" | "supplies";
 type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
@@ -57,7 +57,7 @@ function uniqueById(rows: PriceRow[]): PriceRow[] {
 }
 
 export function Home() {
-  const navigate = useNavigate({ from: "/" });
+  const navigate = useNavigate({ from: "/prices" });
   const search = routeApi.useSearch();
   const {
     filter,
