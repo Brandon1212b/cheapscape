@@ -9,7 +9,8 @@ is `src/routes/__root.tsx`.
 
 | File | URL |
 | --- | --- |
-| `index.tsx` | `/` |
+| `index.tsx` | `/` (landing homepage) |
+| `prices.tsx` | `/prices` |
 | `about.tsx` | `/about` |
 | `users/index.tsx` | `/users` |
 | `users/$id.tsx` | `/users/:id` (dynamic — bare `$`, no curly braces) |
