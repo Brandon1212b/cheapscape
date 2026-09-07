@@ -4,10 +4,11 @@ import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
 
 import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
-import { gp } from "@/lib/format";
-import { HOME_SKILL_HIGHLIGHTS } from "@/lib/home-highlights";
+import { compactNum, gp } from "@/lib/format";
+import { homeMethodRates } from "@/lib/home-highlights";
+import { endgameFallers } from "@/lib/home-fallers";
 import { lastTabSearch } from "@/lib/tab-memory";
-import type { PriceRow, Trend } from "@/lib/osrs.server";
+import type { PriceRow } from "@/lib/osrs.server";
 
 export type { HomeSearch } from "./prices";
 
@@ -23,14 +24,6 @@ const PRICE_SEARCH_KEYS = [
   "skill",
   "supply",
 ] as const;
-
-function rangeChange(trend?: Trend): number {
-  return trend?.change30 ?? 0;
-}
-
-function priceOf(row: PriceRow): number {
-  return row.high ?? row.low ?? 0;
-}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,27 +62,25 @@ function LandingPage() {
     void navigate({ to: "/prices", search: record as never, replace: true });
   }, [location.search, navigate]);
 
-  const fallers = useMemo(() => {
-    const rows = snapshot.data ?? [];
-    const trendMap = trends.data ?? {};
-    return [...rows]
-      .filter((row) => {
-        const change = rangeChange(trendMap[row.id]);
-        const price = priceOf(row);
-        if (!Number.isFinite(change) || change >= 0) return false;
-        if (price < 1_000) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        const ca = rangeChange(trendMap[a.id]);
-        const cb = rangeChange(trendMap[b.id]);
-        return ca - cb || priceOf(b) - priceOf(a);
-      })
-      .slice(0, 6);
-  }, [snapshot.data, trends.data]);
+  const fallers = useMemo(
+    () => endgameFallers(snapshot.data ?? [], trends.data, 6),
+    [snapshot.data, trends.data],
+  );
+
+  const rowsByName = useMemo(() => {
+    const map = new Map<string, PriceRow>();
+    for (const row of snapshot.data ?? []) {
+      map.set(row.name, row);
+    }
+    return map;
+  }, [snapshot.data]);
+
+  const methods = useMemo(() => homeMethodRates(rowsByName), [rowsByName]);
 
   const pricesSearch = {
     ...lastTabSearch("/prices"),
+    filter: "gear",
+    tier: "end",
     sort: "losers",
     range: "1m",
   };
@@ -116,7 +107,7 @@ function LandingPage() {
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top fallers · 1 month</h2>
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Biggest drops
+              Endgame gear
             </span>
           </div>
 
@@ -136,43 +127,40 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && fallers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No clear 1-month drops in the catalog yet.
+              No endgame gear is down over the last month.
             </p>
           )}
 
           {!snapshot.isLoading && fallers.length > 0 && (
             <ul className="divide-y divide-border/40">
-              {fallers.map((row) => {
-                const change = rangeChange(trends.data?.[row.id]);
-                return (
-                  <li key={row.id}>
-                    <Link
-                      to="/item/$id"
-                      params={{ id: String(row.id) }}
-                      search={{ range: "1m" }}
-                      className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
+              {fallers.map((row) => (
+                <li key={row.key}>
+                  <Link
+                    to="/item/$id"
+                    params={{ id: String(row.itemId) }}
+                    search={{ range: "1m" }}
+                    className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
+                  >
+                    <WikiImage
+                      icon={row.icon}
+                      alt=""
+                      width={22}
+                      height={22}
+                      className="size-5 shrink-0"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.name}</span>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">
+                      {gp(row.price)}
+                    </span>
+                    <span
+                      className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
+                      style={{ color: "var(--deal)" }}
                     >
-                      <WikiImage
-                        icon={row.icon}
-                        alt=""
-                        width={22}
-                        height={22}
-                        className="size-5 shrink-0"
-                      />
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.name}</span>
-                      <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">
-                        {gp(priceOf(row))}
-                      </span>
-                      <span
-                        className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
-                        style={{ color: "var(--deal)" }}
-                      >
-                        {change}%
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
+                      {row.change}%
+                    </span>
+                  </Link>
+                </li>
+              ))}
             </ul>
           )}
 
@@ -191,12 +179,12 @@ function LandingPage() {
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top methods</h2>
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              By skill
+              XP / GP
             </span>
           </div>
 
           <ul className="divide-y divide-border/40">
-            {HOME_SKILL_HIGHLIGHTS.map((row) => (
+            {methods.map((row) => (
               <li key={row.skill}>
                 <Link
                   to="/methods"
@@ -211,34 +199,49 @@ function LandingPage() {
                     lazy={false}
                     className="size-5 shrink-0"
                   />
-                  <span className="w-[5.5rem] shrink-0 text-sm font-medium">{row.label}</span>
-                  <WikiImage
-                    icon={row.methodIcon}
-                    alt=""
-                    width={18}
-                    height={18}
-                    className="size-4 shrink-0 opacity-80"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                    {row.method}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <WikiImage
+                        icon={row.methodIcon}
+                        alt=""
+                        width={16}
+                        height={16}
+                        className="size-4 shrink-0 opacity-80"
+                      />
+                      <span className="truncate text-sm font-medium">{row.method}</span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
+                      {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "— xp/h"}
+                      {" · "}
+                      <span
+                        style={{
+                          color:
+                            row.gpPerHour == null
+                              ? undefined
+                              : row.gpPerHour >= 0
+                                ? "var(--deal)"
+                                : "var(--steep)",
+                        }}
+                      >
+                        {row.gpPerHour != null ? `${gp(row.gpPerHour)} gp/h` : "— gp/h"}
+                      </span>
+                    </p>
+                  </div>
                 </Link>
               </li>
             ))}
           </ul>
-        </section>
-      </div>
 
-      <div className="mt-4">
-        <Link
-          to="/methods"
-          search={lastTabSearch("/methods") as never}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-border/70 bg-secondary/40 px-3 text-sm font-semibold text-foreground hover:bg-secondary/70"
-        >
-          <Pickaxe className="size-4" />
-          Skilling methods
-          <ArrowRight className="size-4" />
-        </Link>
+          <Link
+            to="/methods"
+            search={lastTabSearch("/methods") as never}
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Pickaxe className="size-4" />
+            Skilling methods
+            <ArrowRight className="size-4" />
+          </Link>
+        </section>
       </div>
     </main>
   );
