@@ -216,7 +216,7 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </Link>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            See which gear is cheap today versus its recent range.
+            GE prices focused on useful gear to buy, not to flip.
           </p>
         </section>
 
@@ -285,7 +285,7 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </button>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Ranked by opportunity cost against what your time is worth.
+            Wiki methods, with opportunity cost against what your time is worth.
           </p>
         </section>
       </div>
