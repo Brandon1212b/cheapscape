@@ -1,18 +1,12 @@
 import type { Trend } from "./osrs.server";
 
 /**
- * Compact number formatting targeting ~4 significant digits.
+ * Compact number formatting with at most one decimal place.
  *
  * Rules:
  * - Below 10,000: exact integer with comma thousands separator
- * - 10,000–99,999: k, 2 decimals
- * - 100,000–999,999: k, 1 decimal
- * - 1,000,000–9,999,999: m, 3 decimals
- * - 10,000,000–99,999,999: m, 2 decimals
- * - 100,000,000–999,999,999: m, 1 decimal
- * - 1,000,000,000+: same pattern with b (3/2/1 decimals as integer digits grow)
+ * - 10,000+: k / m / b with a single decimal (trailing ".0" stripped)
  * - Negatives: leading "-"
- * - Trailing ".0" / ".00" / ".000" trimmed when all decimal digits are zero
  */
 export function formatCompact(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
@@ -38,17 +32,8 @@ export function formatCompact(n: number | null | undefined): string {
     suffix = "k";
   }
 
-  const scaled = abs / divisor;
-  // Integer digits in the scaled value (before decimal)
-  const intDigits = scaled >= 100 ? 3 : scaled >= 10 ? 2 : 1;
-  // Target 4 significant digits total → decimals = 4 - intDigits, clamped 0–3
-  const decimals = Math.max(0, Math.min(3, 4 - intDigits));
-
-  let body = scaled.toFixed(decimals);
-  // Trim trailing zeros only when the entire decimal portion is zero
-  if (decimals > 0 && /\.0+$/.test(body)) {
-    body = body.replace(/\.0+$/, "");
-  }
+  let body = (abs / divisor).toFixed(1);
+  if (body.endsWith(".0")) body = body.slice(0, -2);
 
   return `${sign}${body}${suffix}`;
 }
