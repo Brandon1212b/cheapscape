@@ -287,9 +287,20 @@ function LandingPage() {
         </section>
       </div>
 
-      <p className="mx-auto mt-4 max-w-md text-center text-[10px] leading-snug text-muted-foreground/80">
-        Cheapscape is a fan project and is not affiliated with Jagex. Grand Exchange prices and wiki
-        rates change; treat all figures as estimates.
+      <p className="mx-auto mt-4 max-w-lg text-center text-[10px] leading-snug text-muted-foreground/80">
+        Cheapscape is a fan project. Created using intellectual property belonging to Jagex Limited
+        under the terms of Jagex's Fan Content Policy. This content is not endorsed by or affiliated
+        with Jagex. Method rates and item icons come from the{" "}
+        <a
+          href="https://oldschool.runescape.wiki/"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2"
+        >
+          Old School RuneScape Wiki
+        </a>
+        . Live prices use the wiki Grand Exchange feed. Figures change and should be treated as
+        estimates.
       </p>
     </main>
   );
