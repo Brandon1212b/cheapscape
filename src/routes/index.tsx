@@ -9,6 +9,8 @@ import { HOME_SKILL_HIGHLIGHTS } from "@/lib/home-highlights";
 import { lastTabSearch } from "@/lib/tab-memory";
 import type { PriceRow, Trend } from "@/lib/osrs.server";
 
+export type { HomeSearch } from "./prices";
+
 const PRICE_SEARCH_KEYS = [
   "filter",
   "sort",
