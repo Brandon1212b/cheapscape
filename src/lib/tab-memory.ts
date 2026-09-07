@@ -5,14 +5,32 @@ import type { RangeKey } from "./osrs.server";
 const SEARCH_KEY = "ge-watch-tab-search";
 export const LAST_SKILL_KEY = "ge-watch-last-skill";
 
-export type TabPath = "/" | "/methods";
+export type TabPath = "/" | "/prices" | "/methods";
 
 type Store = Record<TabPath, Record<string, unknown>>;
 
 const RANGES: RangeKey[] = ["1d", "1w", "1m", "3m", "6m", "1y"];
 
 function empty(): Store {
-  return { "/": {}, "/methods": {} };
+  return { "/": {}, "/prices": {}, "/methods": {} };
+}
+
+function migrateStore(parsed: Partial<Store> & { "/"?: Record<string, unknown> }): Store {
+  const home = parsed["/"] && typeof parsed["/"] === "object" ? parsed["/"] : {};
+  const pricesRaw = parsed["/prices"] && typeof parsed["/prices"] === "object" ? parsed["/prices"] : {};
+  // Old builds stored prices filters on "/".
+  const prices =
+    Object.keys(pricesRaw).length > 0
+      ? pricesRaw
+      : home.filter || home.sort || home.range
+        ? home
+        : {};
+  return {
+    "/": {},
+    "/prices": prices,
+    "/methods":
+      parsed["/methods"] && typeof parsed["/methods"] === "object" ? parsed["/methods"] : {},
+  };
 }
 
 export function readTabSearch(): Store {
@@ -20,12 +38,8 @@ export function readTabSearch(): Store {
   try {
     const raw = sessionStorage.getItem(SEARCH_KEY);
     if (!raw) return empty();
-    const parsed = JSON.parse(raw) as Store;
-    return {
-      "/": parsed["/"] && typeof parsed["/"] === "object" ? parsed["/"] : {},
-      "/methods":
-        parsed["/methods"] && typeof parsed["/methods"] === "object" ? parsed["/methods"] : {},
-    };
+    const parsed = JSON.parse(raw) as Partial<Store>;
+    return migrateStore(parsed);
   } catch {
     return empty();
   }
@@ -47,12 +61,13 @@ export function lastTabSearch(path: TabPath): Record<string, unknown> {
 }
 
 export function lastHomeRange(): RangeKey {
-  const raw = lastTabSearch("/").range;
+  const raw = lastTabSearch("/prices").range;
   return typeof raw === "string" && (RANGES as string[]).includes(raw) ? (raw as RangeKey) : "1m";
 }
 
 export function tabPathFromPathname(pathname: string): TabPath | null {
   if (pathname.startsWith("/methods")) return "/methods";
+  if (pathname.startsWith("/prices")) return "/prices";
   if (pathname.startsWith("/item") || pathname.startsWith("/watchlist") || pathname.startsWith("/auth")) {
     return null;
   }
