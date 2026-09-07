@@ -216,7 +216,7 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </Link>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            GE prices focused on useful gear to buy, not to flip.
+            Live GE prices focused on useful gear to buy, not to flip
           </p>
         </section>
 
@@ -285,10 +285,15 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </button>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Wiki methods, with opportunity cost against what your time is worth.
+            Skilling methods right from the wiki with the ability to account for opportunity cost
           </p>
         </section>
       </div>
+
+      <p className="mx-auto mt-4 max-w-md text-center text-[10px] leading-snug text-muted-foreground/80">
+        Cheapscape is a fan project and is not affiliated with Jagex. Grand Exchange prices and wiki
+        rates change; treat all figures as estimates.
+      </p>
     </main>
   );
 }
