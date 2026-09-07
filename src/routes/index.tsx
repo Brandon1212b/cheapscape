@@ -216,6 +216,9 @@ function LandingPage() {
             Open prices
             <ArrowRight className="size-4" />
           </Link>
+          <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
+            Live GE prices for gear and supplies.
+          </p>
         </section>
 
         <section className="panel flex flex-col p-3 sm:p-4">
@@ -282,6 +285,9 @@ function LandingPage() {
             Skilling methods
             <ArrowRight className="size-4" />
           </button>
+          <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
+            Compare XP/h, GP/h, and training cost.
+          </p>
         </section>
       </div>
     </main>
