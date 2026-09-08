@@ -6,23 +6,15 @@ import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
 import { compactNum, gp } from "@/lib/format";
 import { homeMethodRates } from "@/lib/home-highlights";
-import { endgameFallers } from "@/lib/home-fallers";
-import { lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
+import { endgameFallers, type HomeFaller } from "@/lib/home-fallers";
+import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import type { PriceRow } from "@/lib/osrs.server";
 
 export type { HomeSearch } from "./prices";
 
-const PRICE_SEARCH_KEYS = [
-  "filter",
-  "sort",
-  "range",
-  "q",
-  "combat",
-  "slot",
-  "tier",
-  "set",
-  "supply",
-] as const;
+/** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
+ *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
+const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,7 +45,7 @@ function LandingPage() {
     const search = location.search;
     if (!search || typeof search !== "object") return;
     const record = search as Record<string, unknown>;
-    const hasPriceParams = PRICE_SEARCH_KEYS.some((key) => {
+    const hasPriceParams = PRICE_REDIRECT_KEYS.some((key) => {
       const value = record[key];
       return value != null && value !== "";
     });
@@ -142,64 +134,11 @@ function LandingPage() {
 
           {!snapshot.isLoading && fallers.length > 0 && (
             <ul className="divide-y divide-border/40">
-              {fallers.map((row) => {
-                const inner = (
-                  <>
-                    <WikiImage
-                      icon={row.icon}
-                      alt=""
-                      width={22}
-                      height={22}
-                      className="size-5 shrink-0"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {row.name}
-                      {row.kind === "set" && (
-                        <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          set
-                        </span>
-                      )}
-                    </span>
-                    <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">
-                      {gp(row.price)}
-                    </span>
-                    <span
-                      className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
-                      style={{ color: "var(--deal)" }}
-                    >
-                      {row.change}%
-                    </span>
-                  </>
-                );
-
-                return (
-                  <li key={row.key}>
-                    {row.kind === "set" ? (
-                      <Link
-                        to="/prices"
-                        search={
-                          {
-                            ...pricesSearch,
-                            q: row.query,
-                          } as never
-                        }
-                        className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
-                      >
-                        {inner}
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/item/$id"
-                        params={{ id: String(row.itemId) }}
-                        search={{ range: "1m" }}
-                        className="flex items-center gap-2.5 py-2 hover:bg-secondary/30"
-                      >
-                        {inner}
-                      </Link>
-                    )}
-                  </li>
-                );
-              })}
+              {fallers.map((row) => (
+                <li key={row.key}>
+                  <HomeFallerLink row={row} pricesSearch={pricesSearch} />
+                </li>
+              ))}
             </ul>
           )}
 
@@ -303,5 +242,59 @@ function LandingPage() {
         estimates.
       </p>
     </main>
+  );
+}
+
+const FALLER_ROW_CLASS = "flex items-center gap-2.5 py-2 hover:bg-secondary/30";
+
+/** Single items open the detail page. Armour sets keep filtering Prices by name. */
+function HomeFallerLink({
+  row,
+  pricesSearch,
+}: {
+  row: HomeFaller;
+  pricesSearch: Record<string, unknown>;
+}) {
+  const inner = (
+    <>
+      <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {row.name}
+        {row.kind === "set" && (
+          <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            set
+          </span>
+        )}
+      </span>
+      <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <span className="w-12 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color: "var(--deal)" }}>
+        {row.change}%
+      </span>
+    </>
+  );
+
+  if (row.kind === "set") {
+    return (
+      <Link
+        to="/prices"
+        search={{ ...pricesSearch, q: row.query } as never}
+        className={FALLER_ROW_CLASS}
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  const itemHref = `/item/${row.itemId}?range=${encodeURIComponent(lastHomeRange())}`;
+  return (
+    <Link
+      to="/item/$id"
+      params={{ id: String(row.itemId) }}
+      search={{ range: lastHomeRange() }}
+      href={itemHref}
+      className={FALLER_ROW_CLASS}
+    >
+      {inner}
+    </Link>
   );
 }
