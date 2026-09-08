@@ -12,17 +12,9 @@ import type { PriceRow } from "@/lib/osrs.server";
 
 export type { HomeSearch } from "./prices";
 
-const PRICE_SEARCH_KEYS = [
-  "filter",
-  "sort",
-  "range",
-  "q",
-  "combat",
-  "slot",
-  "tier",
-  "set",
-  "supply",
-] as const;
+/** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
+ *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
+const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,7 +45,7 @@ function LandingPage() {
     const search = location.search;
     if (!search || typeof search !== "object") return;
     const record = search as Record<string, unknown>;
-    const hasPriceParams = PRICE_SEARCH_KEYS.some((key) => {
+    const hasPriceParams = PRICE_REDIRECT_KEYS.some((key) => {
       const value = record[key];
       return value != null && value !== "";
     });
@@ -293,11 +285,13 @@ function HomeFallerLink({
     );
   }
 
+  const itemHref = `/item/${row.itemId}?range=${encodeURIComponent(lastHomeRange())}`;
   return (
     <Link
       to="/item/$id"
       params={{ id: String(row.itemId) }}
       search={{ range: lastHomeRange() }}
+      href={itemHref}
       className={FALLER_ROW_CLASS}
     >
       {inner}
