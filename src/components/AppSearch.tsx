@@ -6,6 +6,7 @@ import { WikiImage } from "@/components/WikiImage";
 import { PopupDismissShield, swallowBehindPopup } from "@/components/popup-dismiss-shield";
 import { useMarketData } from "@/hooks/useMarketData";
 import { CATALOG } from "@/lib/osrs-catalog";
+import "@/lib/catalog-pvm-additions";
 import { itemSearchText } from "@/lib/item-search-aliases";
 import { METHOD_SKILL_SEARCH, skillSearchText } from "@/lib/method-skill-search";
 import { lastHomeRange, lastTabSearch } from "@/lib/tab-memory";

@@ -1,7 +1,29 @@
 import { CATALOG, type CatalogItem } from "./osrs-catalog";
 
+const PRAYER_SCROLLS: CatalogItem[] = [
+  { name: "Dexterous prayer scroll", tags: ["supplies", "prayer", "late", "end"] },
+  { name: "Arcane prayer scroll", tags: ["supplies", "prayer", "late", "end"] },
+  { name: "Torn prayer scroll", tags: ["supplies", "prayer", "mid", "late"] },
+];
+
 /** Kept so existing imports stay valid. Items now live in osrs-catalog.ts. */
-export function applyPvmCatalogAdditions(): void {}
+export function applyPvmCatalogAdditions(): void {
+  for (const group of CATALOG) {
+    if (group.id !== "utility" && group.id !== "prayer") continue;
+    for (const item of PRAYER_SCROLLS) {
+      if (group.items.some((existing) => existing.name === item.name)) continue;
+      group.items.push({
+        name: item.name,
+        tags:
+          group.id === "utility"
+            ? item.tags
+            : item.tags.filter((tag) => tag !== "supplies"),
+      });
+    }
+  }
+}
+
+applyPvmCatalogAdditions();
 
 export const PVM_ADDITION_NAMES: string[] = [
   "Archers ring",
@@ -42,6 +64,3 @@ export const PVM_ADDITION_NAMES: string[] = [
   "Arcane prayer scroll",
   "Torn prayer scroll",
 ];
-
-void CATALOG;
-void (0 as unknown as CatalogItem);
