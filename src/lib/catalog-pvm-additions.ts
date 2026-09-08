@@ -15,7 +15,7 @@ const GEAR_SCROLLS: { name: string; groups: string[]; tags: string[] }[] = [
   {
     name: "Torn prayer scroll",
     groups: ["melee", "ranged", "magic", "prayer"],
-    tags: ["melee", "range", "magic", "prayer", "mid", "late"],
+    tags: ["melee", "range", "magic", "prayer", "mid", "late", "end"],
   },
 ];
 
@@ -35,18 +35,33 @@ function tagsForGroup(groupId: string, tags: string[]): string[] {
   return tags;
 }
 
+function ensureItem(groupId: string, item: CatalogItem): void {
+  const group = CATALOG.find((g) => g.id === groupId);
+  if (!group) return;
+  const existing = group.items.find((i) => i.name === item.name);
+  if (existing) {
+    existing.tags = [...new Set([...existing.tags, ...item.tags])];
+    return;
+  }
+  group.items.push(item);
+}
+
 /** Kept so existing imports stay valid. Items now live in osrs-catalog.ts. */
 export function applyPvmCatalogAdditions(): void {
   for (const scroll of GEAR_SCROLLS) {
-    for (const group of CATALOG) {
-      if (!scroll.groups.includes(group.id)) continue;
-      if (group.items.some((existing) => existing.name === scroll.name)) continue;
-      group.items.push({
+    for (const groupId of scroll.groups) {
+      ensureItem(groupId, {
         name: scroll.name,
-        tags: tagsForGroup(group.id, scroll.tags),
+        tags: tagsForGroup(groupId, scroll.tags),
       });
     }
   }
+
+  // Untradeable; snapshot price comes from 1× Hydra leather (composite-items.ts).
+  ensureItem("melee", {
+    name: "Ferocious gloves",
+    tags: ["melee", "hands", "late", "end"],
+  });
 }
 
 applyPvmCatalogAdditions();
@@ -89,4 +104,5 @@ export const PVM_ADDITION_NAMES: string[] = [
   "Dexterous prayer scroll",
   "Arcane prayer scroll",
   "Torn prayer scroll",
+  "Ferocious gloves",
 ];
