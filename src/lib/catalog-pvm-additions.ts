@@ -1,23 +1,49 @@
 import { CATALOG, type CatalogItem } from "./osrs-catalog";
 
-const PRAYER_SCROLLS: CatalogItem[] = [
-  { name: "Dexterous prayer scroll", tags: ["supplies", "prayer", "late", "end"] },
-  { name: "Arcane prayer scroll", tags: ["supplies", "prayer", "late", "end"] },
-  { name: "Torn prayer scroll", tags: ["supplies", "prayer", "mid", "late"] },
+/** CoX prayer unlocks — tradeable GE items, shown on the Gear tab. */
+const GEAR_SCROLLS: { name: string; groups: string[]; tags: string[] }[] = [
+  {
+    name: "Dexterous prayer scroll",
+    groups: ["ranged", "prayer"],
+    tags: ["range", "prayer", "late", "end"],
+  },
+  {
+    name: "Arcane prayer scroll",
+    groups: ["magic", "prayer"],
+    tags: ["magic", "prayer", "late", "end"],
+  },
+  {
+    name: "Torn prayer scroll",
+    groups: ["melee", "ranged", "magic", "prayer"],
+    tags: ["melee", "range", "magic", "prayer", "mid", "late"],
+  },
 ];
+
+function tagsForGroup(groupId: string, tags: string[]): string[] {
+  if (groupId === "prayer") {
+    return tags.filter((t) => t === "prayer" || t === "mid" || t === "late" || t === "end");
+  }
+  if (groupId === "ranged") {
+    return tags.filter((t) => t !== "melee" && t !== "magic");
+  }
+  if (groupId === "magic") {
+    return tags.filter((t) => t !== "melee" && t !== "range");
+  }
+  if (groupId === "melee") {
+    return tags.filter((t) => t !== "range" && t !== "magic");
+  }
+  return tags;
+}
 
 /** Kept so existing imports stay valid. Items now live in osrs-catalog.ts. */
 export function applyPvmCatalogAdditions(): void {
-  for (const group of CATALOG) {
-    if (group.id !== "utility" && group.id !== "prayer") continue;
-    for (const item of PRAYER_SCROLLS) {
-      if (group.items.some((existing) => existing.name === item.name)) continue;
+  for (const scroll of GEAR_SCROLLS) {
+    for (const group of CATALOG) {
+      if (!scroll.groups.includes(group.id)) continue;
+      if (group.items.some((existing) => existing.name === scroll.name)) continue;
       group.items.push({
-        name: item.name,
-        tags:
-          group.id === "utility"
-            ? item.tags
-            : item.tags.filter((tag) => tag !== "supplies"),
+        name: scroll.name,
+        tags: tagsForGroup(group.id, scroll.tags),
       });
     }
   }
