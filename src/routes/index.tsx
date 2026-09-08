@@ -4,6 +4,7 @@ import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
 
 import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
+import { useEndgameTrends } from "@/hooks/useEndgameTrends";
 import { compactNum, gp } from "@/lib/format";
 import { homeMethodRates } from "@/lib/home-highlights";
 import { endgameFallers, type HomeFaller } from "@/lib/home-fallers";
@@ -39,7 +40,8 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const navigate = useNavigate();
   const location = useRouterState({ select: (s) => s.location });
-  const { snapshot, trends } = useMarketData("1m");
+  const { snapshot } = useMarketData("1m", { trends: false });
+  const endgameTrends = useEndgameTrends();
 
   useEffect(() => {
     const search = location.search;
@@ -54,8 +56,8 @@ function LandingPage() {
   }, [location.search, navigate]);
 
   const fallers = useMemo(
-    () => endgameFallers(snapshot.data ?? [], trends.data, 6),
-    [snapshot.data, trends.data],
+    () => endgameFallers(snapshot.data ?? [], endgameTrends.data, 6),
+    [snapshot.data, endgameTrends.data],
   );
 
   const rowsByName = useMemo(() => {
@@ -112,7 +114,7 @@ function LandingPage() {
             </span>
           </div>
 
-          {snapshot.isLoading && (
+          {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-11 animate-pulse rounded-md bg-secondary/40" />
@@ -126,7 +128,7 @@ function LandingPage() {
             </p>
           )}
 
-          {!snapshot.isLoading && !snapshot.isError && fallers.length === 0 && (
+          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && fallers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
               No endgame gear is down over the last month.
             </p>
