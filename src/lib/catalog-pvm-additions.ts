@@ -38,6 +38,9 @@ export const PVM_ADDITION_NAMES: string[] = [
   "Eternal crystal",
   "Hydra leather",
   "Blood shard",
+  "Dexterous prayer scroll",
+  "Arcane prayer scroll",
+  "Torn prayer scroll",
 ];
 
 void CATALOG;

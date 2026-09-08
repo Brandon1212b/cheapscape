@@ -14,6 +14,9 @@ export const ITEM_SEARCH_ALIASES: Record<string, string> = {
   "crystal helm": "crystal armour armor",
   "crystal body": "crystal armour armor",
   "crystal legs": "crystal armour armor",
+  "dexterous prayer scroll": "rigour rigor cox chambers of xeric",
+  "arcane prayer scroll": "augury cox chambers of xeric",
+  "torn prayer scroll": "preserve cox chambers of xeric",
 };
 
 export function itemSearchText(name: string): string {
