@@ -1,5 +1,9 @@
+import { GEAR_GROUPS } from "./catalog-gear-groups";
+import { SKILLING_GROUPS } from "./catalog-skilling-groups";
+
 export type CatalogItem = {
   name: string;
+  /** Filter tags for subset navigation. */
   tags: string[];
 };
 
@@ -11,7 +15,7 @@ export type CatalogGroup = {
   items: CatalogItem[];
 };
 
-export const CATALOG: CatalogGroup[] = [];
+export const CATALOG: CatalogGroup[] = [...GEAR_GROUPS, ...SKILLING_GROUPS];
 
 export const GEAR_COMBAT_FILTERS = [
   { key: "melee", label: "Melee", wikiIcon: "Attack_icon.png", skillKey: "attack" },
