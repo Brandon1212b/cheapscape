@@ -59,6 +59,14 @@ const allNames = () => {
   ];
 };
 
+const endgameNames = () => [
+  ...new Set(
+    CATALOG.flatMap((g) =>
+      g.kind === "gear" ? g.items.filter((i) => i.tags.includes("end")).map((i) => i.name) : [],
+    ),
+  ),
+];
+
 export const fetchSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<PriceRow[]> => {
   const { getSnapshot } = await import("./osrs.server");
   return getSnapshot(allNames());
@@ -70,6 +78,13 @@ export const fetchTrends = createServerFn({ method: "GET" })
     const { getTrends } = await import("./osrs.server");
     return getTrends(allNames(), data.range ?? "6m");
   });
+
+export const fetchEndgameTrends = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Record<number, Trend>> => {
+    const { getTrends } = await import("./osrs.server");
+    return getTrends(endgameNames(), "1m", "trends:1m:endgame");
+  },
+);
 
 export const fetchItemDetail = createServerFn({ method: "GET" })
   .inputValidator((d: { id: number; range: RangeKey }) => d)
