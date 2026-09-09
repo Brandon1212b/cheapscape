@@ -23,10 +23,9 @@ export function CheapscapeWordmark({
     <img
       src={CHEAPSCAPE_LOGO_URL}
       alt="Cheapscape"
-      width={720}
-      height={336}
-      className={`h-auto max-h-32 border-0 bg-transparent object-contain mix-blend-lighten sm:max-h-36 ${className}`}
-      style={{ mixBlendMode: "lighten", background: "transparent" }}
+      width={640}
+      height={238}
+      className={`h-auto max-h-32 border-0 bg-transparent object-contain sm:max-h-36 ${className}`}
     />
   );
 }
