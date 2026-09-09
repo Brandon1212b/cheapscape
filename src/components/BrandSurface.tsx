@@ -28,8 +28,9 @@ export function CheapscapeWordmark({
       src={CHEAPSCAPE_LOGO_URL}
       alt="Cheapscape"
       width={520}
-      height={171}
+      height={175}
       className={`h-auto max-h-32 border-0 bg-transparent object-contain sm:max-h-36 ${className}`}
+      style={{ mixBlendMode: "lighten" }}
     />
   );
 }
