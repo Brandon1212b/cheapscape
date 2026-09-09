@@ -62,17 +62,17 @@
   /* Old-school parchment & bronze on deep stone */
   --background: oklch(0.19 0.015 60);
   --foreground: oklch(0.93 0.02 85);
-  --card: oklch(0.235 0.018 62);
+  --card: oklch(0.235 0.018 62 / 0.88);
   --card-foreground: oklch(0.93 0.02 85);
-  --popover: oklch(0.235 0.018 62);
+  --popover: oklch(0.235 0.018 62 / 0.94);
   --popover-foreground: oklch(0.93 0.02 85);
   --primary: oklch(0.78 0.14 78);
   --primary-foreground: oklch(0.2 0.03 60);
-  --secondary: oklch(0.3 0.02 62);
+  --secondary: oklch(0.3 0.02 62 / 0.82);
   --secondary-foreground: oklch(0.93 0.02 85);
-  --muted: oklch(0.28 0.016 62);
+  --muted: oklch(0.28 0.016 62 / 0.8);
   --muted-foreground: oklch(0.68 0.025 78);
-  --accent: oklch(0.33 0.03 65);
+  --accent: oklch(0.33 0.03 65 / 0.85);
   --accent-foreground: oklch(0.93 0.02 85);
   --destructive: oklch(0.6 0.19 25);
   --destructive-foreground: oklch(0.97 0.01 85);
@@ -94,7 +94,7 @@
   --chart-4: oklch(0.7 0.1 220);
   --chart-5: oklch(0.75 0.12 320);
 
-  --surface-grad: linear-gradient(180deg, oklch(0.255 0.02 64), oklch(0.215 0.016 62));
+  --surface-grad: linear-gradient(180deg, oklch(0.255 0.02 64 / 0.92), oklch(0.215 0.016 62 / 0.9));
   --gold-grad: linear-gradient(100deg, oklch(0.86 0.13 92), oklch(0.72 0.15 62));
   --shadow-panel: 0 1px 0 oklch(1 0 0 / 6%) inset, 0 10px 30px -12px oklch(0 0 0 / 70%);
 
@@ -138,11 +138,14 @@
 
   body {
     min-height: 100dvh;
-    background-color: var(--color-background);
+    background-color: #14110c;
     background-image:
-      radial-gradient(900px 500px at 12% -10%, oklch(0.32 0.05 72 / 45%), transparent 65%),
-      radial-gradient(700px 420px at 92% 0%, oklch(0.3 0.04 150 / 30%), transparent 60%);
+      linear-gradient(oklch(0.1 0.02 60 / 42%), oklch(0.08 0.02 55 / 55%)),
+      var(--stone-bg, none);
+    background-size: cover;
+    background-position: center;
     background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--color-foreground);
     font-family: var(--font-body);
   }
@@ -169,6 +172,7 @@ select {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(10px);
 }
 
 @utility gold-text {
@@ -186,8 +190,8 @@ select {
 .tab-bar-fade {
   background: linear-gradient(
     to top,
-    oklch(0.19 0.015 60 / 88%) 0%,
-    oklch(0.19 0.015 60 / 35%) 45%,
+    oklch(0.12 0.015 60 / 88%) 0%,
+    oklch(0.12 0.015 60 / 35%) 45%,
     transparent 100%
   );
 }

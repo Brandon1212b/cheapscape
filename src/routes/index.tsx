@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
 
+import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useEndgameTrends } from "@/hooks/useEndgameTrends";
@@ -13,8 +14,6 @@ import type { PriceRow } from "@/lib/osrs.server";
 
 export type { HomeSearch } from "./prices";
 
-/** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
- *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
 export const Route = createFileRoute("/")({
@@ -95,14 +94,10 @@ function LandingPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
       <header className="flex flex-col items-center text-center">
-        <img
-          src="/IMG_3249.jpeg"
-          alt="Cheapscape"
-          width={96}
-          height={96}
-          className="size-20 rounded-2xl object-cover shadow-[0_10px_30px_-12px_oklch(0_0_0/0.7)] ring-1 ring-white/10 sm:size-24"
-        />
-        <h1 className="mt-3 font-sans text-2xl font-bold tracking-tight sm:text-3xl">Cheapscape</h1>
+        <h1 className="absolute h-px w-px overflow-hidden whitespace-nowrap border-0 p-0" style={{ clip: "rect(0, 0, 0, 0)" }}>
+          Cheapscape
+        </h1>
+        <CheapscapeWordmark />
       </header>
 
       <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -249,7 +244,6 @@ function LandingPage() {
 
 const FALLER_ROW_CLASS = "flex items-center gap-2.5 py-2 hover:bg-secondary/30";
 
-/** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
   row,
   pricesSearch,
