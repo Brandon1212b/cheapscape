@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppNav } from "../components/AppNav";
+import { BrandSurface } from "../components/BrandSurface";
 import { runWikiSweep } from "../lib/wiki-sweep";
 import { Toaster } from "sonner";
 
@@ -142,6 +143,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <BrandSurface />
       <div className="min-h-dvh pb-tab">
         <Outlet />
       </div>
