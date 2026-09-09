@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-import { CHEAPSCAPE_LOGO_URL } from "@/lib/cheapscape-logo";
-import { STONE_BG_URL } from "@/lib/stone-bg";
+const STONE_BG_URL = "/stone-bg.jpg";
+const CHEAPSCAPE_LOGO_URL = "/cheapscape-logo.jpg";
 
 export function BrandSurface() {
   useEffect(() => {
