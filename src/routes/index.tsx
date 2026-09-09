@@ -14,8 +14,6 @@ import type { PriceRow } from "@/lib/osrs.server";
 
 export type { HomeSearch } from "./prices";
 
-/** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
- *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
 export const Route = createFileRoute("/")({
@@ -96,7 +94,9 @@ function LandingPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
       <header className="flex flex-col items-center text-center">
-        <h1 className="sr-only">Cheapscape</h1>
+        <h1 className="absolute h-px w-px overflow-hidden whitespace-nowrap border-0 p-0" style={{ clip: "rect(0, 0, 0, 0)" }}>
+          Cheapscape
+        </h1>
         <CheapscapeWordmark />
       </header>
 
@@ -244,7 +244,6 @@ function LandingPage() {
 
 const FALLER_ROW_CLASS = "flex items-center gap-2.5 py-2 hover:bg-secondary/30";
 
-/** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
   row,
   pricesSearch,
