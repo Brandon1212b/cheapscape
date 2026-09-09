@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-const STONE_BG_URL = "/stone-bg.jpg";
-const CHEAPSCAPE_LOGO_URL = "/cheapscape-logo.jpg";
+import { CHEAPSCAPE_LOGO_URL } from "@/lib/cheapscape-logo";
+import { STONE_BG_URL } from "@/lib/stone-bg";
 
 export function BrandSurface() {
   useEffect(() => {
@@ -23,9 +23,9 @@ export function CheapscapeWordmark({
     <img
       src={CHEAPSCAPE_LOGO_URL}
       alt="Cheapscape"
-      width={640}
-      height={224}
-      className={`h-auto max-h-28 object-contain drop-shadow-[0_10px_24px_oklch(0_0_0/0.55)] sm:max-h-32 ${className}`}
+      width={480}
+      height={168}
+      className={`h-auto max-h-28 border-0 object-contain drop-shadow-[0_10px_24px_oklch(0_0_0/0.55)] sm:max-h-32 ${className}`}
     />
   );
 }
