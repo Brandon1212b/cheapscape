@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
 
+import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useEndgameTrends } from "@/hooks/useEndgameTrends";
@@ -95,14 +96,8 @@ function LandingPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
       <header className="flex flex-col items-center text-center">
-        <img
-          src="/IMG_3249.jpeg"
-          alt="Cheapscape"
-          width={96}
-          height={96}
-          className="size-20 rounded-2xl object-cover shadow-[0_10px_30px_-12px_oklch(0_0_0/0.7)] ring-1 ring-white/10 sm:size-24"
-        />
-        <h1 className="mt-3 font-sans text-2xl font-bold tracking-tight sm:text-3xl">Cheapscape</h1>
+        <h1 className="sr-only">Cheapscape</h1>
+        <CheapscapeWordmark />
       </header>
 
       <div className="mt-6 grid gap-3 md:grid-cols-2">
