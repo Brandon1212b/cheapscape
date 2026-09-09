@@ -17,9 +17,10 @@ function trendsTtl(range: RangeKey) {
 }
 
 /** Shared GE snapshot + range trends. Query keys are stable so / and /methods share the cache. */
-export function useMarketData(range: RangeKey = "6m") {
+export function useMarketData(range: RangeKey = "6m", opts?: { trends?: boolean }) {
   const snapshotFn = useServerFn(fetchSnapshot);
   const trendsFn = useServerFn(fetchTrends);
+  const wantTrends = opts?.trends !== false;
 
   const snapshot = useQuery({
     queryKey: ["osrs-snapshot"],
@@ -32,6 +33,7 @@ export function useMarketData(range: RangeKey = "6m") {
   const trends = useQuery({
     queryKey: ["osrs-trends", range],
     queryFn: () => trendsFn({ data: { range } }),
+    enabled: wantTrends,
     staleTime: range === "1d" || range === "1w" ? 5 * 60_000 : 30 * 60_000,
     placeholderData: (prev) =>
       prev ?? readClientCache<Record<number, Trend>>(trendsKey(range), trendsTtl(range)),
