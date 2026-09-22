@@ -1,71 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { CATALOG } from "./osrs-catalog";
-import "./catalog-pvm-additions";
-import { craftingMethodItemNames } from "./crafting-methods";
-import { constructionMethodItemNames } from "./construction-methods";
-import { prayerMethodItemNames } from "./prayer-methods";
-import { smithingMethodItemNames } from "./smithing-methods";
-import { magicMethodItemNames } from "./magic-methods";
-import { runecraftMethodItemNames } from "./runecraft-methods";
-import { farmingMethodItemNames } from "./farming-methods";
-import { fletchingMethodItemNames } from "./fletching-methods";
-import { cookingMethodItemNames } from "./cooking-methods";
-import { agilityMethodItemNames } from "./agility-methods";
-import { herbloreMethodItemNames } from "./herblore-methods";
-import { thievingMethodItemNames } from "./thieving-methods";
-import { miningMethodItemNames } from "./mining-methods";
-import { fishingMethodItemNames } from "./fishing-methods";
-import { woodcuttingMethodItemNames } from "./woodcutting-methods";
-import { firemakingMethodItemNames } from "./firemaking-methods";
-import { hunterMethodItemNames } from "./hunter-methods";
-import { sailingMethodItemNames } from "./sailing-methods";
-import { sailingActivityItemNames } from "./sailing-activity-methods";
-import { activityMethodItemNames } from "./activity-methods";
-import { wikiAuditActivityItemNames } from "./wiki-audit-activities";
-import { sepulchreFloor5ItemNames } from "./sepulchre-floor5";
-import { sepulchreFloor4ItemNames } from "./sepulchre-floor4";
+import { allTrackedItemNames, endgameItemNames } from "./tracked-item-names";
 import type { ItemDetail, PriceRow, PlayerStatsResult, RangeKey, Trend } from "./osrs.server";
 import type { WikiRecResult } from "./wiki-recommended";
 
-const allNames = () => {
-  const fromCatalog = CATALOG.flatMap((g) => g.items.map((i) => i.name));
-  return [
-    ...new Set([
-      ...fromCatalog,
-      ...craftingMethodItemNames(),
-      ...constructionMethodItemNames(),
-      ...prayerMethodItemNames(),
-      ...smithingMethodItemNames(),
-      ...magicMethodItemNames(),
-      ...runecraftMethodItemNames(),
-      ...farmingMethodItemNames(),
-      ...fletchingMethodItemNames(),
-      ...cookingMethodItemNames(),
-      ...agilityMethodItemNames(),
-      ...herbloreMethodItemNames(),
-      ...thievingMethodItemNames(),
-      ...miningMethodItemNames(),
-      ...fishingMethodItemNames(),
-      ...woodcuttingMethodItemNames(),
-      ...firemakingMethodItemNames(),
-      ...hunterMethodItemNames(),
-      ...sailingMethodItemNames(),
-      ...sailingActivityItemNames(),
-      ...activityMethodItemNames(),
-      ...wikiAuditActivityItemNames(),
-      ...sepulchreFloor5ItemNames(),
-      ...sepulchreFloor4ItemNames(),
-    ]),
-  ];
-};
-
-const endgameNames = () => [
-  ...new Set(
-    CATALOG.flatMap((g) =>
-      g.kind === "gear" ? g.items.filter((i) => i.tags.includes("end")).map((i) => i.name) : [],
-    ),
-  ),
-];
+const allNames = () => allTrackedItemNames();
+const endgameNames = () => endgameItemNames();
 
 export const fetchSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<PriceRow[]> => {
   const { getSnapshot } = await import("./osrs.server");
