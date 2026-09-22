@@ -7,9 +7,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-type Envelope<T> = { at: number; value: T };
+export type CacheEnvelope<T> = { at: number; value: T };
 
-const mem = new Map<string, Envelope<unknown>>();
+const mem = new Map<string, CacheEnvelope<unknown>>();
 const DIR = "/tmp/ge-watch-cache";
 
 function kvUrl() {
@@ -23,17 +23,17 @@ function filePath(key: string) {
   return join(DIR, `${key.replace(/[^a-zA-Z0-9._-]+/g, "_")}.json`);
 }
 
-export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null> {
+export async function cacheGetEntry<T>(key: string, ttlMs: number): Promise<CacheEnvelope<T> | null> {
   const now = Date.now();
-  const hit = mem.get(key) as Envelope<T> | undefined;
-  if (hit && now - hit.at < ttlMs) return hit.value;
+  const hit = mem.get(key) as CacheEnvelope<T> | undefined;
+  if (hit && now - hit.at < ttlMs) return hit;
 
   try {
     const raw = readFileSync(filePath(key), "utf8");
-    const parsed = JSON.parse(raw) as Envelope<T>;
+    const parsed = JSON.parse(raw) as CacheEnvelope<T>;
     if (parsed?.at && now - parsed.at < ttlMs) {
       mem.set(key, parsed);
-      return parsed.value;
+      return parsed;
     }
   } catch {
     /* miss */
@@ -49,7 +49,7 @@ export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null>
       if (res.ok) {
         const body = (await res.json()) as { result?: string | null };
         if (body.result) {
-          const parsed = JSON.parse(body.result) as Envelope<T>;
+          const parsed = JSON.parse(body.result) as CacheEnvelope<T>;
           if (parsed?.at && now - parsed.at < ttlMs) {
             mem.set(key, parsed);
             try {
@@ -58,7 +58,7 @@ export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null>
             } catch {
               /* ignore */
             }
-            return parsed.value;
+            return parsed;
           }
         }
       }
@@ -70,8 +70,13 @@ export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null>
   return null;
 }
 
+export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null> {
+  const entry = await cacheGetEntry<T>(key, ttlMs);
+  return entry ? entry.value : null;
+}
+
 export async function cacheSet<T>(key: string, value: T, ttlMs: number): Promise<void> {
-  const env: Envelope<T> = { at: Date.now(), value };
+  const env: CacheEnvelope<T> = { at: Date.now(), value };
   mem.set(key, env);
   try {
     mkdirSync(DIR, { recursive: true });
