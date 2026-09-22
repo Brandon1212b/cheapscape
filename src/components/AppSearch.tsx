@@ -10,6 +10,7 @@ import "@/lib/catalog-pvm-additions";
 import { itemSearchText } from "@/lib/item-search-aliases";
 import { METHOD_SKILL_SEARCH, skillSearchText } from "@/lib/method-skill-search";
 import { lastHomeRange, lastTabSearch } from "@/lib/tab-memory";
+import { buildRowsByName, rowByName } from "@/lib/ge-name-aliases";
 import { Input } from "@/components/ui/input";
 
 type Hit =
@@ -22,13 +23,7 @@ export function AppSearch() {
   const navigate = useNavigate();
   const { snapshot } = useMarketData("6m");
 
-  const rowsByName = useMemo(() => {
-    const map = new Map<string, { id: number; name: string; icon: string }>();
-    for (const r of snapshot.data ?? []) {
-      map.set(r.name.toLowerCase(), { id: r.id, name: r.name, icon: r.icon });
-    }
-    return map;
-  }, [snapshot.data]);
+  const rowsByName = useMemo(() => buildRowsByName(snapshot.data ?? []), [snapshot.data]);
 
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -43,9 +38,7 @@ export function AppSearch() {
     for (const group of CATALOG) {
       for (const item of group.items) {
         if (!itemSearchText(item.name).includes(needle)) continue;
-        const row =
-          rowsByName.get(item.name.toLowerCase()) ??
-          rowsByName.get(item.name.toLowerCase().replace(/ \(.*?\)$/, ""));
+        const row = rowByName(rowsByName, item.name);
         if (!row || seen.has(row.id)) continue;
         seen.add(row.id);
         items.push({ kind: "item", id: row.id, name: row.name, icon: row.icon });
@@ -89,9 +82,7 @@ export function AppSearch() {
           </div>
           <ul className="max-h-64 overflow-y-auto px-2 pb-2">
             {q.trim().length < 2 && (
-              <li className="px-2 py-3 text-xs text-muted-foreground">
-                Type to jump to a skill or item.
-              </li>
+              <li className="px-2 py-3 text-xs text-muted-foreground">Type to jump to a skill or item.</li>
             )}
             {q.trim().length >= 2 && hits.length === 0 && (
               <li className="px-2 py-3 text-xs text-muted-foreground">Nothing matches.</li>
@@ -107,10 +98,7 @@ export function AppSearch() {
                     onClick={() => {
                       if (hit.kind === "skill") {
                         const prev = lastTabSearch("/methods");
-                        void navigate({
-                          to: "/methods",
-                          search: { ...prev, skill: hit.key } as never,
-                        });
+                        void navigate({ to: "/methods", search: { ...prev, skill: hit.key } as never });
                       } else {
                         void navigate({
                           to: "/item/$id",
@@ -121,17 +109,8 @@ export function AppSearch() {
                       close();
                     }}
                   >
-                    <WikiImage
-                      icon={icon}
-                      alt=""
-                      width={22}
-                      height={22}
-                      lazy={false}
-                      className="size-5 shrink-0"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                      {title}
-                    </span>
+                    <WikiImage icon={icon} alt="" width={22} height={22} lazy={false} className="size-5 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{title}</span>
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       {hit.kind === "skill" ? "Skill" : "Item"}
                     </span>
@@ -154,9 +133,7 @@ export function AppSearch() {
         aria-label={open ? "Close search" : "Search items and methods"}
         aria-expanded={open}
         className={`pointer-events-auto relative z-[90] inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-white/10 shadow-[0_10px_40px_-12px_oklch(0_0_0/0.7)] backdrop-blur-2xl transition-colors ${
-          open
-            ? "bg-primary/20 text-primary"
-            : "bg-card/75 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+          open ? "bg-primary/20 text-primary" : "bg-card/75 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
         }`}
       >
         <Search className="size-5" strokeWidth={2} />
