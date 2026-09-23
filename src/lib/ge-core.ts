@@ -1,4 +1,4 @@
-import { COMPOSITE_BY_ID, COMPOSITE_ITEMS, type CompositeItem } from "./composite-items";
+import { COMPOSITE_ITEMS, type CompositeItem } from "./composite-items";
 import { geLookupName } from "./ge-name-aliases";
 import { cacheGetEntry, cacheSet } from "./durable-cache";
 import { allTrackedItemNames, namesScope } from "./tracked-item-names";
@@ -46,13 +46,9 @@ export type Trend = {
   percentile: number;
   low180: number;
   high180: number;
-  /** Mean price of points in the last 30 calendar days (falls back to the selected window). */
   avg30: number;
-  /** % change vs ~30 calendar days ago (falls back to the oldest point in the window). */
   change30: number;
-  /** % change vs ~90 calendar days ago (falls back to the oldest point in the window). */
   change90: number;
-  /** % change from the first point in the selected window to the last. */
   changeWindow: number;
   series: { t: number; p: number }[];
 };
@@ -115,6 +111,61 @@ function resolveMapping(
   );
 }
 
+function priceComposite(
+  c: CompositeItem,
+  byName: Map<string, MappingEntry>,
+  byNameLower: Map<string, MappingEntry>,
+  latest: Record<string, LatestEntry>,
+  day: Record<string, { highPriceVolume: number; lowPriceVolume: number }>,
+): PriceRow | null {
+  if (c.fixedCoins != null && c.sources.length === 0) {
+    return {
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      members: true,
+      limit: null,
+      highalch: null,
+      examine: c.examine,
+      high: c.fixedCoins,
+      low: c.fixedCoins,
+      updated: null,
+      volume: 0,
+    };
+  }
+  let high = c.fixedCoins ?? 0;
+  let low = c.fixedCoins ?? 0;
+  let updated: number | null = null;
+  let volume: number | null = c.fixedCoins != null ? 0 : null;
+  for (const src of c.sources) {
+    const m = resolveMapping(src.name, byName, byNameLower);
+    if (!m) return null;
+    const l = latest[String(m.id)];
+    const srcHigh = l?.high ?? null;
+    const srcLow = l?.low ?? null;
+    if (srcHigh == null && srcLow == null) return null;
+    high += (srcHigh ?? srcLow ?? 0) * src.qty;
+    low += (srcLow ?? srcHigh ?? 0) * src.qty;
+    const t = l?.highTime ?? l?.lowTime ?? null;
+    if (t != null && (updated == null || t > updated)) updated = t;
+    const v = day[String(m.id)];
+    if (v) volume = (volume ?? 0) + (v.highPriceVolume ?? 0) + (v.lowPriceVolume ?? 0);
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    icon: c.icon,
+    members: true,
+    limit: null,
+    highalch: null,
+    examine: c.examine,
+    high,
+    low,
+    updated,
+    volume,
+  };
+}
+
 export async function getSnapshot(names?: string[]): Promise<PriceRow[]> {
   const wantedNames = names && names.length > 0 ? names : allTrackedItemNames();
   const scope = namesScope(wantedNames);
@@ -173,4 +224,41 @@ export async function getSnapshot(names?: string[]): Promise<PriceRow[]> {
   snapshotCaches.set(scope, { at: now, value: rows });
   await cacheSet(`snapshot:${scope}`, rows, ttl);
   return rows;
+}
+
+export type TimeseriesPoint = {
+  timestamp: number;
+  avgHighPrice: number | null;
+  avgLowPrice: number | null;
+  highPriceVolume?: number | null;
+  lowPriceVolume?: number | null;
+};
+
+export function scalePoints(points: TimeseriesPoint[], qty: number) {
+  if (qty === 1) return points;
+  return points.map((p) => ({
+    timestamp: p.timestamp,
+    avgHighPrice: p.avgHighPrice != null ? p.avgHighPrice * qty : null,
+    avgLowPrice: p.avgLowPrice != null ? p.avgLowPrice * qty : null,
+    highPriceVolume: p.highPriceVolume,
+    lowPriceVolume: p.lowPriceVolume,
+  }));
+}
+
+export type RangeKey = "1d" | "1w" | "1m" | "3m" | "6m" | "1y";
+
+export const RANGES: Record<RangeKey, { step: "5m" | "1h" | "6h" | "24h"; points: number; label: string }> = {
+  "1d": { step: "5m", points: 288, label: "24 hours" },
+  "1w": { step: "1h", points: 168, label: "7 days" },
+  "1m": { step: "6h", points: 120, label: "30 days" },
+  "3m": { step: "24h", points: 90, label: "3 months" },
+  "6m": { step: "24h", points: 180, label: "6 months" },
+  "1y": { step: "24h", points: 365, label: "1 year" },
+};
+
+export async function sourceGeId(name: string): Promise<number | null> {
+  const mapping = await getMapping();
+  const lookup = geLookupName(name).toLowerCase();
+  const hit = mapping.find((m) => m.name.toLowerCase() === lookup);
+  return hit?.id ?? null;
 }
