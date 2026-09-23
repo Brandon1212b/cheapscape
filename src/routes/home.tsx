@@ -142,7 +142,9 @@ export function Home() {
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const searching = q.length > 0;
     return CATALOG.filter((g) => {
+      if (searching) return true;
       if (filter === "all") return true;
       if (filter === "skilling") return g.kind === "skilling";
       if (filter === "gear") return g.kind === "gear" && g.id !== "utility";
@@ -152,10 +154,16 @@ export function Home() {
       .map((g) => ({
         ...g,
         rows: g.items
-          .map((item) => lookupPriceRow(rowsByName, item.name))
+          .map((item) => {
+            const row = lookupPriceRow(rowsByName, item.name);
+            if (!row) return undefined;
+            if (!q) return row;
+            const hay = `${itemSearchText(item.name)} ${itemSearchText(row.name)}`;
+            return hay.includes(q) ? row : undefined;
+          })
           .filter((r): r is NonNullable<typeof r> => !!r)
-          .filter((r) => (q ? itemSearchText(r.name).includes(q) : true))
           .filter((r) => {
+            if (searching) return true;
             const tags = itemByName.get(r.name.toLowerCase())?.tags ?? [];
             if (filter === "gear") {
               if (isSuppliesItem(tags)) return false;
@@ -218,9 +226,9 @@ export function Home() {
   }, [groups, trends.data, sort, itemByName, gearCombat]);
 
   const totalCost = useMemo(() => {
-    if (filter !== "gear") return 0;
+    if (filter !== "gear" || query.trim()) return 0;
     return allRows.reduce((sum, r) => sum + priceOf(r), 0);
-  }, [filter, allRows]);
+  }, [filter, query, allRows]);
 
   const restoredScroll = useRef(false);
   useEffect(() => {
