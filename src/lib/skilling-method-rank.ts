@@ -5,6 +5,7 @@ import { resolveActivityBand } from "@/lib/activity-methods";
 import { deriveIntensity } from "@/components/methods-ux";
 import { getActivityType } from "@/components/activity-type";
 import { hoursToXp } from "@/lib/osrs-xp";
+import { lookupPriceRow } from "@/lib/price-lookup";
 import type { RankedMethod, SkillingMethod } from "@/components/skilling-types";
 
 export type AmuletChoice = "none" | "chemistry" | "alchemist";
@@ -101,7 +102,9 @@ export function rankSkillingMethods(opts: {
     xpRemaining,
   } = opts;
 
-  const chemistryPrice = isHerblore ? buyPrice(rowsByName.get("Amulet of chemistry")) : null;
+  const priceOf = (name: string) => lookupPriceRow(rowsByName, name);
+
+  const chemistryPrice = isHerblore ? buyPrice(priceOf("Amulet of chemistry")) : null;
   const list: RankedMethod[] = methods.map((method) => {
     let inputCost = 0;
     let missing = false;
@@ -110,7 +113,7 @@ export function rankSkillingMethods(opts: {
         inputCost += p.qty;
         continue;
       }
-      const unit = buyPrice(rowsByName.get(p.name));
+      const unit = buyPrice(priceOf(p.name));
       if (unit == null) {
         missing = true;
         continue;
@@ -131,7 +134,7 @@ export function rankSkillingMethods(opts: {
         outputValue += p.qty;
         continue;
       }
-      const unit = sellPrice(rowsByName.get(p.name));
+      const unit = sellPrice(priceOf(p.name));
       if (unit == null) {
         missing = true;
         continue;
@@ -152,7 +155,7 @@ export function rankSkillingMethods(opts: {
         baselineIn += p.qty;
         continue;
       }
-      const avg = avg30Price(rowsByName.get(p.name), trendsById);
+      const avg = avg30Price(priceOf(p.name), trendsById);
       if (avg == null) {
         hasBaseline = false;
         break;
@@ -165,7 +168,7 @@ export function rankSkillingMethods(opts: {
           baselineOut += p.qty;
           continue;
         }
-        const avg = avg30Price(rowsByName.get(p.name), trendsById);
+        const avg = avg30Price(priceOf(p.name), trendsById);
         if (avg == null) {
           hasBaseline = false;
           break;
@@ -220,7 +223,7 @@ export function rankSkillingMethods(opts: {
         rewardValue += r.expectedQtyPerHour;
         continue;
       }
-      const unit = sellPrice(rowsByName.get(r.name));
+      const unit = sellPrice(priceOf(r.name));
       if (unit == null) {
         missing = true;
         continue;
@@ -232,7 +235,7 @@ export function rankSkillingMethods(opts: {
         consumableCost += c.qty;
         continue;
       }
-      const unit = buyPrice(rowsByName.get(c.name));
+      const unit = buyPrice(priceOf(c.name));
       if (unit == null) {
         missing = true;
         continue;
