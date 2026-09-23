@@ -8,12 +8,10 @@ import {
   UA,
   equipmentCache,
   getSnapshot,
-  pool,
-  summarise,
-  timeseriesForRow,
   trendCaches,
   trendInFlights,
 } from "./ge-core";
+import { pool, summarise, timeseriesForRow } from "./ge-more";
 import type { Cache, EquipmentStats, PriceRow, RangeKey, Trend } from "./ge-core";
 
 export type { PriceRow, Trend, EquipmentStats, RangeKey } from "./ge-core";
@@ -65,7 +63,6 @@ export async function getTrends(names: string[], range: RangeKey = "6m"): Promis
 export type PricePoint = {
   t: number;
   p: number;
-  /** Combined high+low GE volume for this timestep. */
   v: number;
 };
 
