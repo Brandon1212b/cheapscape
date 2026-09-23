@@ -10,6 +10,7 @@ import "@/lib/catalog-pvm-additions";
 import { itemSearchText } from "@/lib/item-search-aliases";
 import { METHOD_SKILL_SEARCH, skillSearchText } from "@/lib/method-skill-search";
 import { lastHomeRange, lastTabSearch } from "@/lib/tab-memory";
+import { buildPriceRowsByName, lookupPriceRow } from "@/lib/price-lookup";
 import { Input } from "@/components/ui/input";
 
 type Hit =
@@ -22,13 +23,7 @@ export function AppSearch() {
   const navigate = useNavigate();
   const { snapshot } = useMarketData("6m");
 
-  const rowsByName = useMemo(() => {
-    const map = new Map<string, { id: number; name: string; icon: string }>();
-    for (const r of snapshot.data ?? []) {
-      map.set(r.name.toLowerCase(), { id: r.id, name: r.name, icon: r.icon });
-    }
-    return map;
-  }, [snapshot.data]);
+  const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
 
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -43,9 +38,7 @@ export function AppSearch() {
     for (const group of CATALOG) {
       for (const item of group.items) {
         if (!itemSearchText(item.name).includes(needle)) continue;
-        const row =
-          rowsByName.get(item.name.toLowerCase()) ??
-          rowsByName.get(item.name.toLowerCase().replace(/ \(.*?\)$/, ""));
+        const row = lookupPriceRow(rowsByName, item.name);
         if (!row || seen.has(row.id)) continue;
         seen.add(row.id);
         items.push({ kind: "item", id: row.id, name: row.name, icon: row.icon });
