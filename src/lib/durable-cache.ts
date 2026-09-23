@@ -23,17 +23,18 @@ function filePath(key: string) {
   return join(DIR, `${key.replace(/[^a-zA-Z0-9._-]+/g, "_")}.json`);
 }
 
-export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null> {
+/** Full envelope so callers can keep the original `at` instead of resetting TTL. */
+export async function cacheGetEntry<T>(key: string, ttlMs: number): Promise<Envelope<T> | null> {
   const now = Date.now();
   const hit = mem.get(key) as Envelope<T> | undefined;
-  if (hit && now - hit.at < ttlMs) return hit.value;
+  if (hit && now - hit.at < ttlMs) return hit;
 
   try {
     const raw = readFileSync(filePath(key), "utf8");
     const parsed = JSON.parse(raw) as Envelope<T>;
     if (parsed?.at && now - parsed.at < ttlMs) {
       mem.set(key, parsed);
-      return parsed.value;
+      return parsed;
     }
   } catch {
     /* miss */
@@ -58,7 +59,7 @@ export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null>
             } catch {
               /* ignore */
             }
-            return parsed.value;
+            return parsed;
           }
         }
       }
@@ -68,6 +69,11 @@ export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null>
   }
 
   return null;
+}
+
+export async function cacheGet<T>(key: string, ttlMs: number): Promise<T | null> {
+  const entry = await cacheGetEntry<T>(key, ttlMs);
+  return entry ? entry.value : null;
 }
 
 export async function cacheSet<T>(key: string, value: T, ttlMs: number): Promise<void> {

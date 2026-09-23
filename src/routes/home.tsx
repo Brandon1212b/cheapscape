@@ -14,6 +14,7 @@ import { itemSearchText } from "@/lib/item-search-aliases";
 import type { PriceRow, RangeKey, Trend } from "@/lib/osrs.server";
 import { useMarketData } from "@/hooks/useMarketData";
 import { usePlayerLookup } from "@/hooks/usePlayerLookup";
+import { buildPriceRowsByName, lookupPriceRow } from "@/lib/price-lookup";
 import type { HomeSearch } from "./index";
 import { HomeMain } from "./home-main";
 
@@ -33,7 +34,7 @@ function priceOf(row: PriceRow): number {
 }
 
 function rangeChange(trend?: Trend): number {
-  return trend?.change30 ?? 0;
+  return trend?.changeWindow ?? 0;
 }
 
 function isSuppliesItem(tags: string[]) {
@@ -105,14 +106,10 @@ export function Home() {
     });
   };
 
-  const rowsByName = useMemo(() => {
-    const map = new Map<string, PriceRow>();
-    for (const r of snapshot.data ?? []) {
-      map.set(r.name, r);
-      map.set(r.name.toLowerCase(), r);
-    }
-    return map;
-  }, [snapshot.data]);
+  const rowsByName = useMemo(
+    () => buildPriceRowsByName(snapshot.data ?? []),
+    [snapshot.data],
+  );
 
   const itemByName = useMemo(() => {
     const map = new Map<string, CatalogItem>();
@@ -155,15 +152,7 @@ export function Home() {
       .map((g) => ({
         ...g,
         rows: g.items
-          .map((item) => {
-            const geName = geLookupName(item.name);
-            return (
-              rowsByName.get(item.name) ??
-              rowsByName.get(item.name.toLowerCase()) ??
-              rowsByName.get(geName) ??
-              rowsByName.get(geName.toLowerCase())
-            );
-          })
+          .map((item) => lookupPriceRow(rowsByName, item.name))
           .filter((r): r is NonNullable<typeof r> => !!r)
           .filter((r) => (q ? itemSearchText(r.name).includes(q) : true))
           .filter((r) => {

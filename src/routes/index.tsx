@@ -9,7 +9,7 @@ import { compactNum, gp } from "@/lib/format";
 import { homeMethodRates } from "@/lib/home-highlights";
 import { endgameFallers, type HomeFaller } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
-import type { PriceRow } from "@/lib/osrs.server";
+import { buildPriceRowsByName } from "@/lib/price-lookup";
 
 export type { HomeSearch } from "./prices";
 
@@ -60,13 +60,7 @@ function LandingPage() {
     [snapshot.data, endgameTrends.data],
   );
 
-  const rowsByName = useMemo(() => {
-    const map = new Map<string, PriceRow>();
-    for (const row of snapshot.data ?? []) {
-      map.set(row.name, row);
-    }
-    return map;
-  }, [snapshot.data]);
+  const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
 
   const savedMethods = lastTabSearch("/methods");
   const moneyPerHour =
@@ -191,7 +185,7 @@ function LandingPage() {
                     <span className="block truncate text-xs font-medium leading-tight">{row.method}</span>
                     <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
                       {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "—"}
-                      {" \u00b7 "}
+                      {" · "}
                       <span
                         style={{
                           color:

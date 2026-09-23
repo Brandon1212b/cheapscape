@@ -26,6 +26,7 @@ import { SailingMethodsPanel } from "@/components/SailingMethods";
 import type { PriceRow, Trend } from "@/lib/osrs.server";
 import type { PlayerSkills } from "@/lib/player-stats";
 import { readLastSkill, writeLastSkill } from "@/lib/tab-memory";
+import { buildPriceRowsByName } from "@/lib/price-lookup";
 import { FilterPopover, SkillsPanel } from "./home-ui";
 import { MethodSkillsNavProvider } from "@/components/method-skills-nav";
 
@@ -108,7 +109,7 @@ function MethodsPage() {
   const { playerSkills } = usePlayerLookup();
 
   const rowsByName = useMemo(
-    () => new Map((snapshot.data ?? []).map((r) => [r.name, r])),
+    () => buildPriceRowsByName(snapshot.data ?? []),
     [snapshot.data],
   );
 
