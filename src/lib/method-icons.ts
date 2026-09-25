@@ -83,6 +83,13 @@ export const METHOD_ICONS: Record<string, string> = {
   "courier-summer-shore": "Sailing_icon.png",
   "courier-rellekka": "Sailing_icon.png",
   "courier-prifddinas": "Sailing_icon.png",
+  "bounty-early": "Port_tasks_icon.png",
+  "bounty-mid": "Port_tasks_icon.png",
+  "bounty-albatross": "Port_tasks_icon.png",
+  "bounty-tiger-narwhal": "Port_tasks_icon.png",
+  "bounty-spined": "Port_tasks_icon.png",
+  "bounty-armoured-gws": "Port_tasks_icon.png",
+  "bounty-endgame": "Port_tasks_icon.png",
   leechfin: "Leaping_trout.png",
 
   "oak-larder": "Oak_plank.png",
