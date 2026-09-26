@@ -114,6 +114,8 @@
 
   /* Floating tab bar + home-indicator clearance */
   --tab-bar-clearance: calc(5.35rem + env(safe-area-inset-bottom, 0px));
+
+  --stone-bg: url("/background.jpeg");
 }
 
 @theme inline {
@@ -141,7 +143,7 @@
     background-color: #14110c;
     background-image:
       linear-gradient(oklch(0.1 0.02 60 / 42%), oklch(0.08 0.02 55 / 55%)),
-      var(--stone-bg, none);
+      var(--stone-bg);
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
