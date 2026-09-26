@@ -1,14 +1,19 @@
 /**
- * Sailing activities: Barracuda Trials (XP) + shipwreck salvaging (XP + live GE).
+ * Sailing activities: Barracuda Trials (XP) + shipwreck salvaging (XP + live GE)
+ * + bounty port tasks (boat combat).
  *
  * Salvage rewards use wiki MMG expected quantities per hour so gp/hr tracks
  * the live GE snapshot (refetch ~2 min). Residual expectedLootGpPerHour covers
  * coins, rare uniques, and thin-volume items without reliable GE names.
  *
+ * Bounty gp/hr uses wiki on-task average kill value × estimated kills/hr as
+ * residual loot EV; cannonballs are itemized so live GE subtracts ammo cost.
+ *
  * Sources:
  * https://oldschool.runescape.wiki/w/Shipwreck_salvaging
  * https://oldschool.runescape.wiki/w/Money_making_guide/Salvaging_*_shipwrecks
  * https://oldschool.runescape.wiki/w/Sailing_training
+ * https://oldschool.runescape.wiki/w/Bounty_tasks
  */
 import type { ActivityMethod } from "@/lib/activity-methods";
 
@@ -284,6 +289,128 @@ export const SAILING_ACTIVITY_METHODS: ActivityMethod[] = [
     intensity: "low",
     notes:
       "Live GE on gems/herbs/seeds/tokens. Residual ~85k for coins + facility bottle + ironwood repair kits + rare dragon cannon barrel EV.",
+  },
+
+  // ── Bounty tasks (port notice boards, boat combat) ──────────────────────
+  // Wiki does not publish an official bounty XP/hr table (Sailing training
+  // treats them as drop-farming, not max XP). Hourly XP = wiki task XP ×
+  // estimated turn-ins/hr. Task XP from https://oldschool.runescape.wiki/w/Bounty_tasks
+  // (3,465 / 8,800 / 11,825 / 14,575 / 19,910 / 30,965 / 40,370 / 47,080).
+  // Coin bags are tiny (wiki ~0.8–9.6k); GP is on-task monster loot EV.
+  {
+    id: "bounty-early",
+    label: "Bounty — birds & bull sharks",
+    skillKey: "sailing",
+    level: 30,
+    rateBands: [
+      // 3,465 XP/task × ~10 turn-ins/hr (tern, osprey, eagle ray, mogre, bull shark).
+      { level: 30, xpPerHour: 35_000, expectedLootGpPerHour: 40_000 },
+      { level: 45, xpPerHour: 42_000, expectedLootGpPerHour: 55_000 },
+    ],
+    consumables: [{ name: "Mithril cannonball", qty: 350 }],
+    rewards: [],
+    intensity: "medium",
+    notes:
+      "Wiki task XP 3,465 (tiny coin bag). Unlocks at 30. Fast birds (tern/osprey) and bull sharks. Residual loot EV; mithril cballs live-GE subtracted. Port tasks icon / Bounty tasks page.",
+  },
+  {
+    id: "bounty-mid",
+    label: "Bounty — rays, hammerheads & frigatebirds",
+    skillKey: "sailing",
+    level: 40,
+    rateBands: [
+      // 8,800 XP (hammerhead / butterfly ray) or 11,825 (frigatebird / stingray).
+      { level: 40, xpPerHour: 55_000, expectedLootGpPerHour: 70_000 },
+      { level: 50, xpPerHour: 70_000, expectedLootGpPerHour: 90_000 },
+    ],
+    consumables: [{ name: "Adamant cannonball", qty: 280 }],
+    rewards: [],
+    intensity: "medium",
+    notes:
+      "Wiki task XP 8,800 (small bag) or 11,825 (medium bag). Hammerhead, butterfly/stingray, frigatebird. Residual loot − live adamant cballs.",
+  },
+  {
+    id: "bounty-albatross",
+    label: "Bounty — albatross & pygmy kraken",
+    skillKey: "sailing",
+    level: 50,
+    rateBands: [
+      // 14,575 XP/task. ~5.5 tasks/hr at 50; ~8 at 67 with better boat/cannons.
+      { level: 50, xpPerHour: 80_000, expectedLootGpPerHour: 110_000 },
+      { level: 67, xpPerHour: 116_000, expectedLootGpPerHour: 150_000 },
+    ],
+    consumables: [{ name: "Rune cannonball", qty: 220 }],
+    rewards: [],
+    intensity: "medium",
+    notes:
+      "Wiki task XP 14,575 (medium bag). Albatross beak 5 @ 1/10 or feathers 20–30 @ 1/2; pygmy kraken ink/tentacle. Rates pick up ~67 (sloop + crew cannon). Residual loot − live rune cballs.",
+  },
+  {
+    id: "bounty-tiger-narwhal",
+    label: "Bounty — tiger sharks & narwhals",
+    skillKey: "sailing",
+    level: 55,
+    rateBands: [
+      // 19,910 XP/task × ~4–5.5 turn-ins/hr.
+      { level: 55, xpPerHour: 80_000, expectedLootGpPerHour: 180_000 },
+      { level: 67, xpPerHour: 110_000, expectedLootGpPerHour: 260_000 },
+    ],
+    consumables: [{ name: "Rune cannonball", qty: 240 }],
+    rewards: [],
+    intensity: "medium",
+    notes:
+      "Wiki task XP 19,910 (large bag). Tiger shark from 55; narwhal from 62 (Etceteria / Lunar). On-task unique rates apply until the bounty count is met. Residual loot − live rune cballs.",
+  },
+  {
+    id: "bounty-spined",
+    label: "Bounty — spined kraken",
+    skillKey: "sailing",
+    level: 65,
+    rateBands: [
+      // 30,965 XP/task × ~3.5–4.5 turn-ins/hr.
+      { level: 65, xpPerHour: 108_000, expectedLootGpPerHour: 350_000 },
+      { level: 75, xpPerHour: 140_000, expectedLootGpPerHour: 480_000 },
+    ],
+    consumables: [{ name: "Rune cannonball", qty: 260 }],
+    rewards: [],
+    intensity: "medium",
+    notes:
+      "Wiki task XP 30,965 (large bag). Guaranteed ink-sac task at Aldarin. Residual loot − live rune cballs. Ballistic attractor cuts ammo.",
+  },
+  {
+    id: "bounty-armoured-gws",
+    label: "Bounty — armoured kraken & great whites",
+    skillKey: "sailing",
+    level: 75,
+    rateBands: [
+      // 40,370 XP/task × ~3.2–4 turn-ins/hr.
+      // Wiki on-task avg kill: armoured kraken 24,493 GE; great white 20,832 GE.
+      { level: 75, xpPerHour: 130_000, expectedLootGpPerHour: 1_100_000 },
+      { level: 90, xpPerHour: 160_000, expectedLootGpPerHour: 1_350_000 },
+    ],
+    consumables: [{ name: "Dragon cannonball", qty: 180 }],
+    rewards: [],
+    intensity: "high",
+    notes:
+      "Wiki task XP 40,370 (huge bag). On-task avg kill 20.8k (GWS) / 24.5k (armoured). Residual ≈ 50–60 kph × that EV; live dragon cballs subtracted. On-task uniques: bottled storm, broken dragon hook, keel parts.",
+  },
+  {
+    id: "bounty-endgame",
+    label: "Bounty — vampyre/veiled kraken & orca",
+    skillKey: "sailing",
+    level: 80,
+    rateBands: [
+      // 47,080 XP/task. ~3.4 tasks/hr at 80; ~4.25 at 99 → ~200k (community high-end with dragon cballs).
+      // Wiki on-task avg kill: vampyre 32,462; veiled 27,307; orca 21,746.
+      // Wiki veiled setup: 83 kph combat-only @ 99 Range + dragon cannon (195 cballs lost w/ attractor).
+      { level: 80, xpPerHour: 160_000, expectedLootGpPerHour: 1_500_000 },
+      { level: 99, xpPerHour: 200_000, expectedLootGpPerHour: 2_270_000 },
+    ],
+    consumables: [{ name: "Dragon cannonball", qty: 195 }],
+    rewards: [],
+    intensity: "high",
+    notes:
+      "Wiki task XP 47,080 (huge bag). All bounty tasks available at 80. 99 band uses wiki veiled 83 kph × 27,307 on-task GE as gross loot; 195 dragon cballs from that same setup. Lunar Isle = vampyre; Deepfin = veiled. Better profit than max XP — wiki training page.",
   },
 ];
 

@@ -26,7 +26,7 @@ export const METHOD_SKILL_SEARCH: MethodSkillHit[] = [
   { key: "firemaking", label: "Firemaking", terms: "campfire wintertodt line burn pyre logs" },
   { key: "thieving", label: "Thieving", terms: "pickpocket pyramid plunder artefacts" },
   { key: "hunter", label: "Hunter", terms: "chins herbiboar rumours implings birdhouse letvek stymphike vampyrium" },
-  { key: "sailing", label: "Sailing", terms: "courier charting port" },
+  { key: "sailing", label: "Sailing", terms: "courier charting port bounty kraken shark orca" },
 ].map((s) => ({
   ...s,
   wikiIcon: SKILL_ICONS[s.key] ?? `${s.label}_icon.png`,

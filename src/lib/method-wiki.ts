@@ -175,6 +175,13 @@ const BY_ID: Record<string, WikiRef> = {
   "hallowed-sepulchre": mmg("Hallowed Sepulchre (Floor 5)", "Hallowed Sepulchre Floor 5"),
   "wilderness-agility-tickets": mmg("Wilderness Agility Course", "Wilderness Agility Course"),
   "wilderness-agility": mmg("Wilderness Agility Course", "Wilderness Agility Course"),
+  "bounty-early": { page: "Bounty tasks", title: "Bounty tasks" },
+  "bounty-mid": { page: "Bounty tasks", title: "Bounty tasks" },
+  "bounty-albatross": { page: "Bounty tasks", title: "Bounty tasks" },
+  "bounty-tiger-narwhal": { page: "Bounty tasks", title: "Bounty tasks" },
+  "bounty-spined": { page: "Bounty tasks", title: "Bounty tasks" },
+  "bounty-armoured-gws": { page: "Bounty tasks", title: "Bounty tasks" },
+  "bounty-endgame": { page: "Bounty tasks", title: "Bounty tasks" },
 };
 
 type PrefixRule = { match: (id: string) => boolean; ref: WikiRef };
@@ -186,6 +193,7 @@ const PREFIX_RULES: PrefixRule[] = [
   { match: (id) => id.startsWith("infernal-shale"), ref: BY_ID["infernal-shale"] },
   { match: (id) => id.startsWith("rubium-splinters"), ref: BY_ID["rubium-splinters"] },
   { match: (id) => id.startsWith("trawl-"), ref: mmg("Deep sea trawling for yellowfin", "Deep sea trawling") },
+  { match: (id) => id.startsWith("bounty-"), ref: { page: "Bounty tasks", title: "Bounty tasks" } },
 ];
 
 export function resolveMethodWiki(id: string, skillKey?: string | null): WikiRef {

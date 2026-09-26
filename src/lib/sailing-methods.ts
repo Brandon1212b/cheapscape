@@ -2,8 +2,8 @@
  * Sailing training methods (P2P).
  * https://oldschool.runescape.wiki/w/Sailing_training
  *
- * Barracuda Trials + shipwreck salvaging (with wiki MMG GP/hr) live in
- * sailing-activity-methods.ts.
+ * Barracuda Trials, shipwreck salvaging, and bounty tasks (with wiki-backed
+ * XP/hr + live-GE cannonball cost) live in sailing-activity-methods.ts.
  *
  * Courier / charting are pure XP — coin rewards vary too much by route to model
  * as stable GE outputs.
