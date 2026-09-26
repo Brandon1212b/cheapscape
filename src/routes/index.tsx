@@ -10,10 +10,12 @@ import { compactNum, gp } from "@/lib/format";
 import { homeMethodRates } from "@/lib/home-highlights";
 import { endgameFallers, type HomeFaller } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
-import type { PriceRow } from "@/lib/osrs.server";
+import { buildPriceRowsByName } from "@/lib/price-lookup";
 
 export type { HomeSearch } from "./prices";
 
+/** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
+ *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
 export const Route = createFileRoute("/")({
@@ -59,13 +61,7 @@ function LandingPage() {
     [snapshot.data, endgameTrends.data],
   );
 
-  const rowsByName = useMemo(() => {
-    const map = new Map<string, PriceRow>();
-    for (const row of snapshot.data ?? []) {
-      map.set(row.name, row);
-    }
-    return map;
-  }, [snapshot.data]);
+  const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
 
   const savedMethods = lastTabSearch("/methods");
   const moneyPerHour =
@@ -244,6 +240,7 @@ function LandingPage() {
 
 const FALLER_ROW_CLASS = "flex items-center gap-2.5 py-2 hover:bg-secondary/30";
 
+/** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
   row,
   pricesSearch,
