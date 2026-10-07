@@ -191,6 +191,7 @@ export const OFFENSIVE_BONUS: Record<string, number> = {
   "Purging staff": 0,
   "Sanguinesti staff (uncharged)": 0,
   "Eye of ayak (uncharged)": 0,
+  "Soulflame horn": 1,
   "Elidinis' ward": 0,
   "Elidinis' ward (f)": 5,
   "Eternal boots": 1,
