@@ -259,6 +259,7 @@ export const GEAR_GROUPS: CatalogGroup[] = [
       { name: "Purging staff", tags: ["magic", "weapon", "two-handed", "late"] },
       { name: "Sanguinesti staff (uncharged)", tags: ["magic", "weapon", "one-handed", "late"] },
       { name: "Eye of ayak (uncharged)", tags: ["magic", "weapon", "one-handed", "late"] },
+      { name: "Soulflame horn", tags: ["magic", "weapon", "one-handed", "late", "end"] },
       { name: "Elidinis' ward", tags: ["magic", "shield", "late"] },
       { name: "Ancient wyvern shield", tags: ["magic", "shield", "late"] },
       { name: "Elidinis' ward (f)", tags: ["magic", "shield", "end"] },
