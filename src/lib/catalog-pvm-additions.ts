@@ -105,4 +105,5 @@ export const PVM_ADDITION_NAMES: string[] = [
   "Arcane prayer scroll",
   "Torn prayer scroll",
   "Ferocious gloves",
+  "Soulflame horn",
 ];
