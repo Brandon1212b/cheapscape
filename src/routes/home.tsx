@@ -1,5 +1,5 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   CATALOG,
@@ -15,12 +15,13 @@ import type { PriceRow, RangeKey, Trend } from "@/lib/osrs.server";
 import { useMarketData } from "@/hooks/useMarketData";
 import { usePlayerLookup } from "@/hooks/usePlayerLookup";
 import { buildPriceRowsByName, lookupPriceRow } from "@/lib/price-lookup";
+import { readBank, type BankEntry } from "@/lib/bank";
 import type { HomeSearch } from "./index";
 import { HomeMain } from "./home-main";
 
 const routeApi = getRouteApi("/prices");
 
-type Filter = "all" | "gear" | "skilling" | "supplies";
+type Filter = "all" | "gear" | "skilling" | "supplies" | "bank";
 type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
 
 const DEFAULT_RANGE: RangeKey = "1m";
@@ -85,6 +86,11 @@ export function Home() {
     clearRsn,
   } = usePlayerLookup();
 
+  const [bankEntries, setBankEntries] = useState<BankEntry[]>([]);
+  useEffect(() => {
+    setBankEntries(readBank());
+  }, []);
+
   const patchSearch = (patch: Partial<HomeSearch>) => {
     void navigate({
       search: (prev: HomeSearch) => {
@@ -110,6 +116,18 @@ export function Home() {
     () => buildPriceRowsByName(snapshot.data ?? []),
     [snapshot.data],
   );
+
+  const bankIds = useMemo(() => {
+    const ids = new Set<number>();
+    const qtyById = new Map<number, number>();
+    for (const entry of bankEntries) {
+      const row = lookupPriceRow(rowsByName, entry.name);
+      if (!row) continue;
+      ids.add(row.id);
+      qtyById.set(row.id, (qtyById.get(row.id) ?? 0) + entry.quantity);
+    }
+    return { ids, qtyById };
+  }, [bankEntries, rowsByName]);
 
   const itemByName = useMemo(() => {
     const map = new Map<string, CatalogItem>();
@@ -145,7 +163,7 @@ export function Home() {
     const searching = q.length > 0;
     return CATALOG.filter((g) => {
       if (searching) return true;
-      if (filter === "all") return true;
+      if (filter === "all" || filter === "bank") return true;
       if (filter === "skilling") return g.kind === "skilling";
       if (filter === "gear") return g.kind === "gear" && g.id !== "utility";
       if (filter === "supplies") return g.id === "utility";
@@ -164,6 +182,7 @@ export function Home() {
           .filter((r): r is NonNullable<typeof r> => !!r)
           .filter((r) => {
             if (searching) return true;
+            if (filter === "bank") return bankIds.ids.has(r.id);
             const tags = itemByName.get(r.name.toLowerCase())?.tags ?? [];
             if (filter === "gear") {
               if (isSuppliesItem(tags)) return false;
@@ -194,6 +213,7 @@ export function Home() {
     skill,
     supplyType,
     itemByName,
+    bankIds,
   ]);
 
   const allRows = useMemo(() => {
@@ -263,7 +283,7 @@ export function Home() {
   const showGearSub = filter === "gear";
   const showSkillSub = filter === "skilling";
   const showSupplySub = filter === "supplies";
-  const gridKey = `${filter}:${gearCombat}:${gearSlot}:${gearTier}:${gearSet}:${skill}:${supplyType}:${sort}:${range}:${query}`;
+  const gridKey = `${filter}:${gearCombat}:${gearSlot}:${gearTier}:${gearSet}:${skill}:${supplyType}:${sort}:${range}:${query}:${bankEntries.length}`;
 
   const skillBarEntries = useMemo(() => {
     if (!playerSkills) return [];
@@ -334,6 +354,9 @@ export function Home() {
       itemReqs={itemReqs}
       totalCost={totalCost}
       gridKey={gridKey}
+      bankQtyById={bankIds.qtyById}
+      bankCount={bankEntries.length}
+      onBankUpdated={() => setBankEntries(readBank())}
     />
   );
 }
