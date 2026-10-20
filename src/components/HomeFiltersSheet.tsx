@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Loader2, SlidersHorizontal, User, X } from "lucide-react";
+import { Loader2, SlidersHorizontal, User, X, Landmark } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { PopupDismissShield, PopupPortal, swallowBehindPopup } from "@/components/popup-dismiss-shield";
 import {
@@ -10,8 +11,9 @@ import {
 } from "@/lib/osrs-catalog";
 import type { PlayerSkills } from "@/lib/player-stats";
 import type { RangeKey } from "@/lib/osrs.server";
+import { parseBankDump, writeBank, readBank } from "@/lib/bank";
 
-type Filter = "all" | "gear" | "skilling" | "supplies";
+type Filter = "all" | "gear" | "skilling" | "supplies" | "bank";
 type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
 
 const CATEGORIES: { key: Filter; label: string }[] = [
@@ -19,6 +21,7 @@ const CATEGORIES: { key: Filter; label: string }[] = [
   { key: "gear", label: "Gear" },
   { key: "skilling", label: "Skilling items" },
   { key: "supplies", label: "Supplies" },
+  { key: "bank", label: "My bank" },
 ];
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -111,6 +114,8 @@ export function HomeFiltersSheet({
   onSupplyChange,
   onSortChange,
   onRangeChange,
+  bankCount,
+  onBankUpdated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -132,9 +137,12 @@ export function HomeFiltersSheet({
   onSupplyChange: (next: string) => void;
   onSortChange: (next: SortKey) => void;
   onRangeChange: (next: RangeKey) => void;
+  bankCount?: number;
+  onBankUpdated?: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
+  const [dump, setDump] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -164,6 +172,24 @@ export function HomeFiltersSheet({
   const toggle = () => {
     if (open) swallowBehindPopup();
     onOpenChange(!open);
+  };
+
+  const loadDump = () => {
+    const parsed = parseBankDump(dump);
+    if (parsed.length === 0) {
+      toast.error("No items found. Try 'Dragon bones x 5000' or tab-separated.");
+      return;
+    }
+    writeBank(parsed);
+    onBankUpdated?.();
+    setDump("");
+    toast.success(`Loaded ${parsed.length} items`);
+  };
+
+  const clearBank = () => {
+    writeBank([]);
+    onBankUpdated?.();
+    toast("Bank cleared");
   };
 
   return (
@@ -288,6 +314,43 @@ export function HomeFiltersSheet({
                           ))}
                         </div>
                       </>
+                    )}
+                    {filter === "bank" && (
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                          <Landmark className="size-3" />
+                          My bank {bankCount != null && bankCount > 0 ? `(${bankCount})` : ""}
+                        </p>
+                        <textarea
+                          value={dump}
+                          onChange={(e) => setDump(e.target.value)}
+                          placeholder="Paste bank dump...\nDragon bones x 2500\nAbyssal whip\t1"
+                          rows={4}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60"
+                        />
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={loadDump}
+                            disabled={!dump.trim()}
+                            className="rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                          >
+                            Load
+                          </button>
+                          {bankCount != null && bankCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={clearBank}
+                              className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Supports tab-separated, "name x qty", or "name qty". Only catalog items are shown.
+                        </p>
+                      </div>
                     )}
                   </section>
                   <section className="space-y-2">
