@@ -59,6 +59,12 @@ Star items from the catalog. Set a target GP price or a % drop from the 6-month 
 
 Saved in **this browser only** (`localStorage`). Clearing site data or switching devices resets it. Cloud accounts are off.
 
+### Bank (`/bank`)
+
+Paste a bank dump (tab-separated, “name x qty”, or “name qty”) to see which catalog items you own, their live prices, quantities, and total GE value. Unmatched items are listed separately.
+
+Saved in **this browser only** (`localStorage`).
+
 ## How method cost works
 
 The slider labeled **Your rate** is “GP you’d make if you weren’t training” (default 2m/h).
@@ -128,15 +134,16 @@ No environment variables are required for prices or methods.
 | `/item/$id` | Item detail + chart |
 | `/methods` | Skilling methods |
 | `/watchlist` | Local price alerts |
+| `/bank` | Paste bank dump and see owned items |
 | `/auth` | Accounts disabled |
 
-Bottom tab bar: **Prices** and **Methods**, plus a global search control. Filter / sort / selected skill persist in the URL (and last skill is remembered).
+Bottom tab bar: **Home**, **Prices**, **Methods**, and **Bank**, plus a global search control. Filter / sort / selected skill persist in the URL (and last skill is remembered).
 
 ## Repo map
 
 ```
 src/
-  routes/           pages (home, item, methods, watchlist, auth)
+  routes/           pages (home, item, methods, watchlist, bank, auth)
   components/       cards, method rows, filters, nav, charts
   lib/
     osrs.server.ts          Wiki GE + hiscores + caches
@@ -146,6 +153,7 @@ src/
     *-activities.ts         Minigame / activity methods
     method-rank.ts          Cost and net-value ranking
     watchlist.ts            localStorage watchlist
+    bank.ts                 localStorage bank + dump parser
   hooks/            market data, hiscores, mobile
 ```
 
