@@ -11,7 +11,7 @@ const DEFAULT_FILTER = "gear" as const;
 const DEFAULT_TIER = "end";
 
 const homeSearchSchema = z.object({
-  filter: z.enum(["all", "gear", "skilling", "supplies"]).catch(DEFAULT_FILTER),
+  filter: z.enum(["all", "gear", "skilling", "supplies", "bank"]).catch(DEFAULT_FILTER),
   sort: z.enum(["gainers", "losers", "expensive", "cheap", "value"]).catch(DEFAULT_SORT),
   range: z.enum(["1d", "1w", "1m", "3m", "6m", "1y"]).catch(DEFAULT_RANGE),
   q: z.string().catch(""),
