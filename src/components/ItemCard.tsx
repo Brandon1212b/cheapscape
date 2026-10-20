@@ -18,6 +18,7 @@ export function ItemCard({
   trend,
   locked,
   lockReason,
+  quantity,
 }: {
   row: PriceRow;
   trend?: Trend | undefined;
@@ -25,6 +26,8 @@ export function ItemCard({
   locked?: boolean;
   /** e.g. "Attack 70" */
   lockReason?: string | null;
+  /** Quantity owned when viewing My bank filter */
+  quantity?: number;
 }) {
   const price = row.high ?? row.low;
   const signal = signalOf(trend);
@@ -54,6 +57,11 @@ export function ItemCard({
       {locked && lockReason && (
         <div className="absolute bottom-1.5 left-1.5 z-20 rounded bg-background/90 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground ring-1 ring-border/50 sm:bottom-2 sm:left-2 sm:text-[10px]">
           {lockReason}
+        </div>
+      )}
+      {quantity != null && quantity > 0 && (
+        <div className="absolute bottom-1.5 right-1.5 z-20 rounded bg-background/90 px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-foreground ring-1 ring-border/50 sm:bottom-2 sm:right-2 sm:text-[10px]">
+          ×{quantity.toLocaleString()}
         </div>
       )}
       {trend ? (
