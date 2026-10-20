@@ -19,7 +19,7 @@ import { EquipmentPaperDoll, FilterPopover, SkillsPanel, SubTab, WikiIconTab } f
 import type { HomeSearch } from "./index";
 import { WikiImage } from "@/components/WikiImage";
 
-type Filter = "all" | "gear" | "skilling" | "supplies";
+type Filter = "all" | "gear" | "skilling" | "supplies" | "bank";
 type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
 
 type HomeMainProps = {
@@ -53,6 +53,9 @@ type HomeMainProps = {
   itemReqs: Record<number, Record<string, number>>;
   totalCost: number;
   gridKey: string;
+  bankQtyById?: Map<number, number>;
+  bankCount?: number;
+  onBankUpdated?: () => void;
 };
 
 const DOT = String.fromCharCode(183);
@@ -88,6 +91,9 @@ export function HomeMain({
   itemReqs,
   totalCost,
   gridKey,
+  bankQtyById,
+  bankCount,
+  onBankUpdated,
 }: HomeMainProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
@@ -292,6 +298,8 @@ export function HomeMain({
           onSupplyChange={(next) => patchSearch({ filter: "supplies", supply: next })}
           onSortChange={(next) => patchSearch({ sort: next })}
           onRangeChange={(next) => patchSearch({ range: next })}
+          bankCount={bankCount}
+          onBankUpdated={onBankUpdated}
         />
       </div>
 
@@ -400,6 +408,7 @@ export function HomeMain({
               const reqs = itemReqs[row.id];
               const locked = playerSkills != null && !meetsRequirements(playerSkills, reqs);
               const lockReason = locked ? firstMissingRequirement(playerSkills, reqs) : null;
+              const qty = bankQtyById?.get(row.id);
               return (
                 <ItemCard
                   key={row.id}
@@ -407,6 +416,7 @@ export function HomeMain({
                   trend={trends.data?.[row.id]}
                   locked={locked}
                   lockReason={lockReason}
+                  quantity={qty}
                 />
               );
             })}
@@ -425,7 +435,9 @@ export function HomeMain({
 
       {!snapshot.isLoading && allRows.length === 0 && (
         <p className="mt-10 text-center text-sm text-muted-foreground">
-          Nothing matches that filter right now.
+          {filter === "bank" && (bankCount ?? 0) === 0
+            ? "Open filters and paste your bank dump under My bank to see your items."
+            : "Nothing matches that filter right now."}
         </p>
       )}
 
