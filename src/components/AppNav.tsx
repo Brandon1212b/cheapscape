@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChartLine, House, Pickaxe } from "lucide-react";
+import { ChartLine, House, Landmark, Pickaxe } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { AppSearch } from "@/components/AppSearch";
 import { lastTabSearch, tabPathFromPathname, writeTabSearch } from "@/lib/tab-memory";
 
-type TabTo = "/" | "/prices" | "/methods";
+type TabTo = "/" | "/prices" | "/methods" | "/bank";
 
 type Tab = {
   to: TabTo;
@@ -33,6 +33,12 @@ const TABS: Tab[] = [
     label: "Methods",
     Icon: Pickaxe,
     match: (p) => p.startsWith("/methods"),
+  },
+  {
+    to: "/bank",
+    label: "Bank",
+    Icon: Landmark,
+    match: (p) => p.startsWith("/bank"),
   },
 ];
 

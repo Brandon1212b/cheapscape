@@ -5,14 +5,14 @@ import type { RangeKey } from "./osrs.server";
 const SEARCH_KEY = "ge-watch-tab-search";
 export const LAST_SKILL_KEY = "ge-watch-last-skill";
 
-export type TabPath = "/" | "/prices" | "/methods";
+export type TabPath = "/" | "/prices" | "/methods" | "/bank";
 
 type Store = Record<TabPath, Record<string, unknown>>;
 
 const RANGES: RangeKey[] = ["1d", "1w", "1m", "3m", "6m", "1y"];
 
 function empty(): Store {
-  return { "/": {}, "/prices": {}, "/methods": {} };
+  return { "/": {}, "/prices": {}, "/methods": {}, "/bank": {} };
 }
 
 function migrateStore(parsed: Partial<Store> & { "/"?: Record<string, unknown> }): Store {
@@ -30,6 +30,7 @@ function migrateStore(parsed: Partial<Store> & { "/"?: Record<string, unknown> }
     "/prices": prices,
     "/methods":
       parsed["/methods"] && typeof parsed["/methods"] === "object" ? parsed["/methods"] : {},
+    "/bank": parsed["/bank"] && typeof parsed["/bank"] === "object" ? parsed["/bank"] : {},
   };
 }
 
@@ -68,6 +69,7 @@ export function lastHomeRange(): RangeKey {
 export function tabPathFromPathname(pathname: string): TabPath | null {
   if (pathname.startsWith("/methods")) return "/methods";
   if (pathname.startsWith("/prices")) return "/prices";
+  if (pathname.startsWith("/bank")) return "/bank";
   if (pathname.startsWith("/item") || pathname.startsWith("/watchlist") || pathname.startsWith("/auth")) {
     return null;
   }
