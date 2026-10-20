@@ -10,7 +10,7 @@ Not affiliated with Jagex.
 
 ## What it does
 
-### Prices (`/`)
+### Prices (`/prices`)
 
 A curated catalog of combat gear, skilling items, and supplies — not the entire GE.
 
@@ -18,11 +18,12 @@ A curated catalog of combat gear, skilling items, and supplies — not the entir
 - Sparkline + 6-month high/low on every card
 - % change badge so dumps and spikes are obvious
 - Search by item name or common alias
-- Filters: All / Gear / Skilling items / Supplies
+- Filters: All / Gear / Skilling items / Supplies / **My bank**
 - Gear sub-filters: combat style, equipment slot (paper doll), tier, set
 - Sort: losers (default), gainers, expensive, cheap, best value (GP per combat bonus)
 - Trend windows: 24h, 1w, 1m, 3m, 6m, 1y
 - Untradeable upgrades (crystal armour, scorching bow, blood fury, …) show an **implied GE price** from their materials
+- **My bank** filter: paste a bank dump in the filters sheet to show only items you own, with quantity badges, so you can see risers and fallers in your bank.
 
 ### Item page (`/item/$id`)
 
@@ -58,12 +59,6 @@ Activity-type chips narrow a skill (Battlestaves, Blast Furnace, Cannonballs, He
 Star items from the catalog. Set a target GP price or a % drop from the 6-month high. Hits highlight as alerts.
 
 Saved in **this browser only** (`localStorage`). Clearing site data or switching devices resets it. Cloud accounts are off.
-
-### Bank (`/bank`)
-
-Paste a bank dump (tab-separated, “name x qty”, or “name qty”) to see which catalog items you own, their live prices, quantities, and total GE value. Unmatched items are listed separately.
-
-Saved in **this browser only** (`localStorage`).
 
 ## How method cost works
 
@@ -130,20 +125,20 @@ No environment variables are required for prices or methods.
 
 | Path | Page |
 | --- | --- |
-| `/` | Price catalog |
+| `/` | Landing |
+| `/prices` | Price catalog (with filters including My bank) |
 | `/item/$id` | Item detail + chart |
 | `/methods` | Skilling methods |
 | `/watchlist` | Local price alerts |
-| `/bank` | Paste bank dump and see owned items |
 | `/auth` | Accounts disabled |
 
-Bottom tab bar: **Home**, **Prices**, **Methods**, and **Bank**, plus a global search control. Filter / sort / selected skill persist in the URL (and last skill is remembered).
+Bottom tab bar: **Home**, **Prices**, and **Methods**, plus a global search control. Filter / sort / selected skill persist in the URL (and last skill is remembered). Bank data is stored in `localStorage`.
 
 ## Repo map
 
 ```
 src/
-  routes/           pages (home, item, methods, watchlist, bank, auth)
+  routes/           pages (home, item, methods, watchlist, auth)
   components/       cards, method rows, filters, nav, charts
   lib/
     osrs.server.ts          Wiki GE + hiscores + caches
