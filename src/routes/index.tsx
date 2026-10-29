@@ -110,7 +110,7 @@ function LandingPage() {
             </p>
           )}
 
-          {!snapshot.isLoading && fallers.length > 0 && (
+          {!snapshot.isLoading && buyers.length > 0 && (
             <ul className="divide-y divide-border/40">
               {buyers.map((row) => (
                 <li key={row.key}>
