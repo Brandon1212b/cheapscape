@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, ChartLine } from "lucide-react";
+import { ArrowRight, ChartLine, ChevronDown } from "lucide-react";
 
 import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
@@ -17,6 +17,35 @@ export type { HomeSearch } from "./prices";
 /** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
+
+const PRICE_MAX = 1_000_000_000;
+const PRICE_MID = 10_000_000;
+
+/** Map a 0-100 slider position to a price with 1m steps to 10m, then 10m steps to 1B. */
+function sliderToPrice(pos: number): number {
+  if (pos <= 0) return 0;
+  if (pos >= 100) return PRICE_MAX;
+  // First 10% of slider = 0 to 10m in 1m steps (10 steps)
+  if (pos <= 10) {
+    const step = Math.round((pos / 10) * 10);
+    return step * 1_000_000;
+  }
+  // Remaining 90% = 10m to 1B in 10m steps
+  const remaining = (pos - 10) / 90;
+  const steps = Math.round(remaining * ((PRICE_MAX - PRICE_MID) / 10_000_000));
+  return PRICE_MID + steps * 10_000_000;
+}
+
+/** Inverse: price to 0-100 slider position. */
+function priceToSlider(price: number): number {
+  if (price <= 0) return 0;
+  if (price >= PRICE_MAX) return 100;
+  if (price <= PRICE_MID) {
+    return (price / PRICE_MID) * 10;
+  }
+  const remaining = (price - PRICE_MID) / (PRICE_MAX - PRICE_MID);
+  return 10 + remaining * 90;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,7 +74,7 @@ function LandingPage() {
   const endgameTrends = useEndgameTrends();
 
   const [period, setPeriod] = useState<Period>("30");
-  const [priceRange, setPriceRange] = useState<[number, number]>([1_000, 1_000_000_000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, PRICE_MAX]);
 
   useEffect(() => {
     const search = location.search;
@@ -96,42 +125,30 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary/20 p-0.5">
-          {(["1", "7", "30"] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(p)}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
-                period === p
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-              }`}
-            >
-              {p === "1" ? "1D" : p === "7" ? "7D" : "30D"}
-            </button>
-          ))}
+      <div className="mt-4">
+        <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span>Price range</span>
+          <span className="tabular-nums">
+            {gp(priceRange[0])} – {priceRange[1] >= PRICE_MAX ? "1B" : gp(priceRange[1])}
+          </span>
         </div>
-
-        <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-xs">
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Price
-          </span>
-          <Slider
-            min={Math.log10(1_000)}
-            max={Math.log10(1_000_000_000)}
-            step={0.1}
-            value={[Math.log10(priceRange[0]), Math.log10(priceRange[1])]}
-            onValueChange={(v) => {
-              const [a, b] = v as [number, number];
-              setPriceRange([Math.round(10 ** a), Math.round(10 ** b)]);
-            }}
-            className="flex-1"
-          />
-          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-            {gp(priceRange[0])}–{gp(priceRange[1])}
-          </span>
+        <Slider
+          min={0}
+          max={100}
+          step={0.5}
+          value={[priceToSlider(priceRange[0]), priceToSlider(priceRange[1])]}
+          onValueChange={(v) => {
+            const [a, b] = v as [number, number];
+            const lo = sliderToPrice(a);
+            const hi = sliderToPrice(b);
+            setPriceRange([Math.min(lo, hi), Math.max(lo, hi)]);
+          }}
+        />
+        <div className="mt-1 flex justify-between text-[9px] text-muted-foreground/70">
+          <span>0</span>
+          <span>10M</span>
+          <span>100M</span>
+          <span>1B</span>
         </div>
       </div>
 
@@ -166,7 +183,7 @@ function LandingPage() {
 
           {!snapshot.isLoading && buyers.length > 0 && (
             <>
-              <ChangeHeader period={periodLabel} />
+              <ChangeHeader period={period} setPeriod={setPeriod} />
               <ul className="divide-y divide-border/40">
                 {buyers.map((row) => (
                   <li key={row.key}>
@@ -221,7 +238,7 @@ function LandingPage() {
 
           {!snapshot.isLoading && sellers.length > 0 && (
             <>
-              <ChangeHeader period={periodLabel} />
+              <ChangeHeader period={period} setPeriod={setPeriod} />
               <ul className="divide-y divide-border/40">
                 {sellers.map((row) => (
                   <li key={row.key}>
@@ -266,14 +283,31 @@ function LandingPage() {
   );
 }
 
-function ChangeHeader({ period }: { period: string }) {
+function ChangeHeader({
+  period,
+  setPeriod,
+}: {
+  period: Period;
+  setPeriod: (p: Period) => void;
+}) {
   return (
     <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       <span className="size-5 shrink-0" />
       <span className="min-w-0 max-w-[7rem] flex-1 sm:max-w-[9rem]">Item</span>
       <span className="hidden w-10 shrink-0 sm:block" />
       <span className="w-14 shrink-0 text-right">Price</span>
-      <span className="w-11 shrink-0 text-right">{period}</span>
+      <div className="relative w-12 shrink-0 text-right">
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as Period)}
+          className="w-full appearance-none bg-transparent pr-3 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
+        >
+          <option value="1">1D</option>
+          <option value="7">7D</option>
+          <option value="30">30D</option>
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-0 top-0.5 size-3" />
+      </div>
     </div>
   );
 }
