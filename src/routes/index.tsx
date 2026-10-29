@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, ChartLine } from "lucide-react";
 
@@ -7,9 +7,10 @@ import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useEndgameTrends } from "@/hooks/useEndgameTrends";
 import { gp } from "@/lib/format";
-import { lateEndgameOpportunities, type HomeFaller } from "@/lib/home-fallers";
+import { lateEndgameOpportunities, type HomeFaller, type Period } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import { buildPriceRowsByName } from "@/lib/price-lookup";
+import { Slider } from "@/components/ui/slider";
 
 export type { HomeSearch } from "./prices";
 
@@ -43,6 +44,9 @@ function LandingPage() {
   const { snapshot } = useMarketData("1m", { trends: false });
   const endgameTrends = useEndgameTrends();
 
+  const [period, setPeriod] = useState<Period>("30");
+  const [priceRange, setPriceRange] = useState<[number, number]>([1_000, 1_000_000_000]);
+
   useEffect(() => {
     const search = location.search;
     if (!search || typeof search !== "object") return;
@@ -55,13 +59,22 @@ function LandingPage() {
     void navigate({ to: "/prices", search: record as never, replace: true });
   }, [location.search, navigate]);
 
+  const allBuyers = useMemo(
+    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "buy", 50, period),
+    [snapshot.data, endgameTrends.data, period],
+  );
+  const allSellers = useMemo(
+    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "sell", 50, period),
+    [snapshot.data, endgameTrends.data, period],
+  );
+
   const buyers = useMemo(
-    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "buy", 10),
-    [snapshot.data, endgameTrends.data],
+    () => allBuyers.filter((r) => r.price >= priceRange[0] && r.price <= priceRange[1]).slice(0, 10),
+    [allBuyers, priceRange],
   );
   const sellers = useMemo(
-    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "sell", 10),
-    [snapshot.data, endgameTrends.data],
+    () => allSellers.filter((r) => r.price >= priceRange[0] && r.price <= priceRange[1]).slice(0, 10),
+    [allSellers, priceRange],
   );
 
   const pricesSearch = {
@@ -72,6 +85,8 @@ function LandingPage() {
     range: "1m",
   };
 
+  const periodLabel = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
+
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
       <header className="flex flex-col items-center text-center">
@@ -81,7 +96,46 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary/20 p-0.5">
+          {(["1", "7", "30"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPeriod(p)}
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
+                period === p
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              }`}
+            >
+              {p === "1" ? "1D" : p === "7" ? "7D" : "30D"}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-xs">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Price
+          </span>
+          <Slider
+            min={Math.log10(1_000)}
+            max={Math.log10(1_000_000_000)}
+            step={0.1}
+            value={[Math.log10(priceRange[0]), Math.log10(priceRange[1])]}
+            onValueChange={(v) => {
+              const [a, b] = v as [number, number];
+              setPriceRange([Math.round(10 ** a), Math.round(10 ** b)]);
+            }}
+            className="flex-1"
+          />
+          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+            {gp(priceRange[0])}–{gp(priceRange[1])}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
@@ -106,17 +160,17 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && buyers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No late/endgame gear is down over the last month.
+              No late/endgame gear is down over the last {periodLabel.toLowerCase()}.
             </p>
           )}
 
           {!snapshot.isLoading && buyers.length > 0 && (
             <>
-              <ChangeHeader />
+              <ChangeHeader period={periodLabel} />
               <ul className="divide-y divide-border/40">
                 {buyers.map((row) => (
                   <li key={row.key}>
-                    <HomeFallerLink row={row} pricesSearch={pricesSearch} />
+                    <HomeFallerLink row={row} pricesSearch={pricesSearch} period={period} />
                   </li>
                 ))}
               </ul>
@@ -161,17 +215,17 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && sellers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No late/endgame gear is up over the last month.
+              No late/endgame gear is up over the last {periodLabel.toLowerCase()}.
             </p>
           )}
 
           {!snapshot.isLoading && sellers.length > 0 && (
             <>
-              <ChangeHeader />
+              <ChangeHeader period={periodLabel} />
               <ul className="divide-y divide-border/40">
                 {sellers.map((row) => (
                   <li key={row.key}>
-                    <HomeFallerLink row={row} pricesSearch={pricesSearch} />
+                    <HomeFallerLink row={row} pricesSearch={pricesSearch} period={period} />
                   </li>
                 ))}
               </ul>
@@ -212,26 +266,77 @@ function LandingPage() {
   );
 }
 
-function ChangeHeader() {
+function ChangeHeader({ period }: { period: string }) {
   return (
     <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       <span className="size-5 shrink-0" />
-      <span className="min-w-0 max-w-[8rem] flex-1 sm:max-w-[10rem]">Item</span>
-      <span className="w-16 shrink-0 text-right">Price</span>
-      <span className="w-11 shrink-0 text-right">1D</span>
-      <span className="w-11 shrink-0 text-right">7D</span>
-      <span className="w-11 shrink-0 text-right">30D</span>
+      <span className="min-w-0 max-w-[7rem] flex-1 sm:max-w-[9rem]">Item</span>
+      <span className="hidden w-10 shrink-0 sm:block" />
+      <span className="w-14 shrink-0 text-right">Price</span>
+      <span className="w-11 shrink-0 text-right">{period}</span>
     </div>
   );
 }
 
 function ChangeCell({ value }: { value: number }) {
-  const color = value >= 0 ? "var(--deal)" : "var(--steep)";
+  const abs = Math.abs(value);
+  const intensity = Math.min(1, abs / 15);
+  const base = value >= 0 ? "var(--deal)" : "var(--steep)";
+  const opacity = 0.45 + intensity * 0.55;
   return (
-    <span className="w-11 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color }}>
+    <span
+      className="w-11 shrink-0 text-right text-xs font-bold tabular-nums"
+      style={{ color: base, opacity }}
+    >
       {value > 0 ? "+" : ""}{value}%
     </span>
   );
+}
+
+function TinySparkline({ series }: { series: { t: number; p: number }[] }) {
+  if (series.length < 2) return null;
+  const w = 40;
+  const h = 16;
+  const prices = series.map((s) => s.p);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const span = max - min || 1;
+  const pts = series.map((s, i) => {
+    const x = (i / (series.length - 1)) * w;
+    const y = h - ((s.p - min) / span) * (h - 2) - 1;
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const last = series[series.length - 1]!.p;
+  const first = series[0]!.p;
+  const up = last >= first;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="hidden h-4 w-10 shrink-0 sm:block" preserveAspectRatio="none" aria-hidden>
+      <path d={pts} fill="none" stroke={up ? "var(--deal)" : "var(--steep)"} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+function NearTag({ row }: { row: HomeFaller }) {
+  if (row.low180 == null || row.price <= 0) return null;
+  const dist = (row.price - row.low180) / row.price;
+  if (dist < 0.08 || (row.percentile != null && row.percentile <= 12)) {
+    return (
+      <span className="ml-1 align-middle rounded bg-steep/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-steep">
+        near low
+      </span>
+    );
+  }
+  if (row.high180 != null) {
+    const distHigh = (row.high180 - row.price) / row.price;
+    if (distHigh < 0.08 || (row.percentile != null && row.percentile >= 88)) {
+      return (
+        <span className="ml-1 align-middle rounded bg-deal/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-deal">
+          near high
+        </span>
+      );
+    }
+  }
+  return null;
 }
 
 const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
@@ -240,25 +345,28 @@ const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
 function HomeFallerLink({
   row,
   pricesSearch,
+  period,
 }: {
   row: HomeFaller;
   pricesSearch: Record<string, unknown>;
+  period: Period;
 }) {
+  const change = period === "1" ? row.change1 : period === "7" ? row.change7 : row.change30;
   const inner = (
     <>
       <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
-      <span className="min-w-0 max-w-[8rem] flex-1 truncate text-sm font-medium sm:max-w-[10rem]">
+      <span className="min-w-0 max-w-[7rem] flex-1 truncate text-sm font-medium sm:max-w-[9rem]">
         {row.name}
         {row.kind === "set" && (
-          <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="ml-1 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             set
           </span>
         )}
+        <NearTag row={row} />
       </span>
-      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
-      <ChangeCell value={row.change1} />
-      <ChangeCell value={row.change7} />
-      <ChangeCell value={row.change30} />
+      <TinySparkline series={row.series} />
+      <span className="w-14 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <ChangeCell value={change} />
     </>
   );
 
