@@ -18,7 +18,7 @@ export const fetchTrends = createServerFn({ method: "GET" })
 export const fetchEndgameTrends = createServerFn({ method: "GET" }).handler(
   async (): Promise<Record<number, Trend>> => {
     const { getTrends } = await import("./osrs.server");
-    return getTrends(endgameItemNames(), "1m");
+    return getTrends(endgameItemNames(), "6m");
   },
 );
 
