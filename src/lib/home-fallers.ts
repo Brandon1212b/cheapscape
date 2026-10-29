@@ -2,6 +2,8 @@ import { CATALOG, type CatalogItem } from "@/lib/osrs-catalog";
 import { geLookupName } from "@/lib/ge-name-aliases";
 import type { PriceRow, Trend } from "@/lib/osrs.server";
 
+export type Period = "1" | "7" | "30";
+
 export type HomeFaller = {
   key: string;
   name: string;
@@ -12,6 +14,10 @@ export type HomeFaller = {
   change1: number;
   change7: number;
   change30: number;
+  series: { t: number; p: number }[];
+  low180: number | null;
+  high180: number | null;
+  percentile: number | null;
   kind: "item" | "set";
 };
 
@@ -55,7 +61,7 @@ function priceOf(row: PriceRow): number {
   return row.high ?? row.low ?? 0;
 }
 
-function changeOf(trend: Trend | undefined, period: "1" | "7" | "30"): number {
+function changeOf(trend: Trend | undefined, period: Period): number {
   if (!trend) return 0;
   if (period === "1") return trend.change1 ?? 0;
   if (period === "7") return trend.change7 ?? 0;
@@ -121,7 +127,7 @@ function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
     .map(([key, b]) => ({ key, label: b.label, query: b.query, pieces: [...b.pieces] }));
 }
 
-function setChange(pieces: PriceRow[], trends: Record<number, Trend> | undefined, period: "1" | "7" | "30"): number {
+function setChange(pieces: PriceRow[], trends: Record<number, Trend> | undefined, period: Period): number {
   let total = 0;
   let base = 0;
   for (const row of pieces) {
@@ -140,6 +146,7 @@ export function lateEndgameOpportunities(
   trends: Record<number, Trend> | undefined,
   mode: "buy" | "sell" = "buy",
   limit = 10,
+  period: Period = "30",
 ): HomeFaller[] {
   const catalog = catalogByName();
   const families = buildSetFamilies(catalog);
@@ -162,14 +169,19 @@ export function lateEndgameOpportunities(
     change1: number,
     change7: number,
     change30: number,
+    series: { t: number; p: number }[],
+    low180: number | null,
+    high180: number | null,
+    percentile: number | null,
     kind: HomeFaller["kind"],
     key: string,
   ) => {
-    if (!Number.isFinite(change30)) return;
-    if (mode === "buy" && change30 >= 0) return;
-    if (mode === "sell" && change30 <= 0) return;
+    const rankChange = period === "1" ? change1 : period === "7" ? change7 : change30;
+    if (!Number.isFinite(rankChange)) return;
+    if (mode === "buy" && rankChange >= 0) return;
+    if (mode === "sell" && rankChange <= 0) return;
     if (price < 1_000) return;
-    out.push({ key, name, query, icon, itemId, price, change1, change7, change30, kind });
+    out.push({ key, name, query, icon, itemId, price, change1, change7, change30, series, low180, high180, percentile, kind });
   };
 
   for (const family of families) {
@@ -194,10 +206,11 @@ export function lateEndgameOpportunities(
     const c7 = setChange(pieces, trends, "7");
     const c30 = setChange(pieces, trends, "30");
     const extreme = pieces.reduce((best, row) => {
-      const ch = changeOf(trends?.[row.id], "30");
-      const bestCh = changeOf(trends?.[best.id], "30");
+      const ch = changeOf(trends?.[row.id], period);
+      const bestCh = changeOf(trends?.[best.id], period);
       return mode === "buy" ? (ch < bestCh ? row : best) : ch > bestCh ? row : best;
     }, pieces[0]!);
+    const extremeTrend = trends?.[extreme.id];
 
     consider(
       family.label,
@@ -208,6 +221,10 @@ export function lateEndgameOpportunities(
       c1,
       c7,
       c30,
+      extremeTrend?.series ?? [],
+      extremeTrend?.low180 ?? null,
+      extremeTrend?.high180 ?? null,
+      extremeTrend?.percentile ?? null,
       "set",
       family.key,
     );
@@ -236,15 +253,20 @@ export function lateEndgameOpportunities(
       changeOf(trend, "1"),
       changeOf(trend, "7"),
       changeOf(trend, "30"),
+      trend?.series ?? [],
+      trend?.low180 ?? null,
+      trend?.high180 ?? null,
+      trend?.percentile ?? null,
       "item",
       `item-${row.id}`,
     );
   }
 
+  const rankKey = (f: HomeFaller) => (period === "1" ? f.change1 : period === "7" ? f.change7 : f.change30);
   const sorted =
     mode === "buy"
-      ? out.sort((a, b) => a.change30 - b.change30 || b.price - a.price)
-      : out.sort((a, b) => b.change30 - a.change30 || b.price - a.price);
+      ? out.sort((a, b) => rankKey(a) - rankKey(b) || b.price - a.price)
+      : out.sort((a, b) => rankKey(b) - rankKey(a) || b.price - a.price);
   return sorted.slice(0, limit);
 }
 
@@ -254,5 +276,5 @@ export function endgameFallers(
   trends: Record<number, Trend> | undefined,
   limit = 6,
 ): HomeFaller[] {
-  return lateEndgameOpportunities(rows, trends, "buy", limit);
+  return lateEndgameOpportunities(rows, trends, "buy", limit, "30");
 }
