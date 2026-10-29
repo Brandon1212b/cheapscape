@@ -9,7 +9,9 @@ export type HomeFaller = {
   icon: string;
   itemId: number;
   price: number;
-  change: number;
+  change1: number;
+  change7: number;
+  change30: number;
   kind: "item" | "set";
 };
 
@@ -53,8 +55,11 @@ function priceOf(row: PriceRow): number {
   return row.high ?? row.low ?? 0;
 }
 
-function rangeChange(trend?: Trend): number {
-  return trend?.change30 ?? 0;
+function changeOf(trend: Trend | undefined, period: "1" | "7" | "30"): number {
+  if (!trend) return 0;
+  if (period === "1") return trend.change1 ?? 0;
+  if (period === "7") return trend.change7 ?? 0;
+  return trend.change30 ?? 0;
 }
 
 function baselinePrice(current: number, changePct: number): number | null {
@@ -116,6 +121,20 @@ function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
     .map(([key, b]) => ({ key, label: b.label, query: b.query, pieces: [...b.pieces] }));
 }
 
+function setChange(pieces: PriceRow[], trends: Record<number, Trend> | undefined, period: "1" | "7" | "30"): number {
+  let total = 0;
+  let base = 0;
+  for (const row of pieces) {
+    const price = priceOf(row);
+    const change = changeOf(trends?.[row.id], period);
+    total += price;
+    const implied = baselinePrice(price, change);
+    base += implied ?? price;
+  }
+  if (base <= 0) return 0;
+  return Math.round(((total - base) / base) * 1000) / 10;
+}
+
 export function lateEndgameOpportunities(
   rows: PriceRow[],
   trends: Record<number, Trend> | undefined,
@@ -140,15 +159,17 @@ export function lateEndgameOpportunities(
     icon: string,
     itemId: number,
     price: number,
-    change: number,
+    change1: number,
+    change7: number,
+    change30: number,
     kind: HomeFaller["kind"],
     key: string,
   ) => {
-    if (!Number.isFinite(change)) return;
-    if (mode === "buy" && change >= 0) return;
-    if (mode === "sell" && change <= 0) return;
+    if (!Number.isFinite(change30)) return;
+    if (mode === "buy" && change30 >= 0) return;
+    if (mode === "sell" && change30 <= 0) return;
     if (price < 1_000) return;
-    out.push({ key, name, query, icon, itemId, price, change, kind });
+    out.push({ key, name, query, icon, itemId, price, change1, change7, change30, kind });
   };
 
   for (const family of families) {
@@ -169,31 +190,24 @@ export function lateEndgameOpportunities(
       continue;
     }
 
-    let total = 0;
-    let base = 0;
-    let extreme = pieces[0]!;
-    let extremeChange = rangeChange(trends?.[extreme.id]);
-    for (const row of pieces) {
-      const price = priceOf(row);
-      const change = rangeChange(trends?.[row.id]);
-      total += price;
-      const implied = baselinePrice(price, change);
-      base += implied ?? price;
-      const isBetter = mode === "buy" ? change < extremeChange : change > extremeChange;
-      if (isBetter) {
-        extreme = row;
-        extremeChange = change;
-      }
-    }
-    const setChange =
-      base > 0 ? Math.round(((total - base) / base) * 1000) / 10 : extremeChange;
+    const c1 = setChange(pieces, trends, "1");
+    const c7 = setChange(pieces, trends, "7");
+    const c30 = setChange(pieces, trends, "30");
+    const extreme = pieces.reduce((best, row) => {
+      const ch = changeOf(trends?.[row.id], "30");
+      const bestCh = changeOf(trends?.[best.id], "30");
+      return mode === "buy" ? (ch < bestCh ? row : best) : ch > bestCh ? row : best;
+    }, pieces[0]!);
+
     consider(
       family.label,
       family.query,
       extreme.icon,
       extreme.id,
-      total,
-      setChange,
+      pieces.reduce((s, r) => s + priceOf(r), 0),
+      c1,
+      c7,
+      c30,
       "set",
       family.key,
     );
@@ -212,21 +226,25 @@ export function lateEndgameOpportunities(
     ) {
       continue;
     }
+    const trend = trends?.[row.id];
     consider(
       row.name,
       row.name,
       row.icon,
       row.id,
       priceOf(row),
-      rangeChange(trends?.[row.id]),
+      changeOf(trend, "1"),
+      changeOf(trend, "7"),
+      changeOf(trend, "30"),
       "item",
       `item-${row.id}`,
     );
   }
 
-  const sorted = mode === "buy"
-    ? out.sort((a, b) => a.change - b.change || b.price - a.price)
-    : out.sort((a, b) => b.change - a.change || b.price - a.price);
+  const sorted =
+    mode === "buy"
+      ? out.sort((a, b) => a.change30 - b.change30 || b.price - a.price)
+      : out.sort((a, b) => b.change30 - a.change30 || b.price - a.price);
   return sorted.slice(0, limit);
 }
 
