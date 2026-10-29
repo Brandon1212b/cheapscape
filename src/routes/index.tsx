@@ -111,13 +111,16 @@ function LandingPage() {
           )}
 
           {!snapshot.isLoading && buyers.length > 0 && (
-            <ul className="divide-y divide-border/40">
-              {buyers.map((row) => (
-                <li key={row.key}>
-                  <HomeFallerLink row={row} pricesSearch={pricesSearch} />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ChangeHeader />
+              <ul className="divide-y divide-border/40">
+                {buyers.map((row) => (
+                  <li key={row.key}>
+                    <HomeFallerLink row={row} pricesSearch={pricesSearch} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           <Link
@@ -163,13 +166,16 @@ function LandingPage() {
           )}
 
           {!snapshot.isLoading && sellers.length > 0 && (
-            <ul className="divide-y divide-border/40">
-              {sellers.map((row) => (
-                <li key={row.key}>
-                  <HomeFallerLink row={row} pricesSearch={pricesSearch} />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ChangeHeader />
+              <ul className="divide-y divide-border/40">
+                {sellers.map((row) => (
+                  <li key={row.key}>
+                    <HomeFallerLink row={row} pricesSearch={pricesSearch} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           <Link
@@ -206,7 +212,29 @@ function LandingPage() {
   );
 }
 
-const FALLER_ROW_CLASS = "flex items-center gap-2.5 py-2 hover:bg-secondary/30";
+function ChangeHeader() {
+  return (
+    <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="size-5 shrink-0" />
+      <span className="min-w-0 flex-1">Item</span>
+      <span className="w-16 shrink-0 text-right">Price</span>
+      <span className="w-11 shrink-0 text-right">1D</span>
+      <span className="w-11 shrink-0 text-right">7D</span>
+      <span className="w-11 shrink-0 text-right">30D</span>
+    </div>
+  );
+}
+
+function ChangeCell({ value }: { value: number }) {
+  const color = value >= 0 ? "var(--deal)" : "var(--steep)";
+  return (
+    <span className="w-11 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color }}>
+      {value > 0 ? "+" : ""}{value}%
+    </span>
+  );
+}
+
+const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
 
 /** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
@@ -227,10 +255,10 @@ function HomeFallerLink({
           </span>
         )}
       </span>
-      <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
-      <span className="w-12 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color: row.change >= 0 ? "var(--deal)" : "var(--steep)" }}>
-        {row.change > 0 ? "+" : ""}{row.change}%
-      </span>
+      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <ChangeCell value={row.change1} />
+      <ChangeCell value={row.change7} />
+      <ChangeCell value={row.change30} />
     </>
   );
 
