@@ -47,6 +47,8 @@ export type Trend = {
   low180: number;
   high180: number;
   avg30: number;
+  change1: number;
+  change7: number;
   change30: number;
   change90: number;
   changeWindow: number;
