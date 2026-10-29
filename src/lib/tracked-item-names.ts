@@ -61,7 +61,7 @@ export function endgameItemNames(): string[] {
   return [
     ...new Set(
       CATALOG.flatMap((g) =>
-        g.kind === "gear" ? g.items.filter((i) => i.tags.includes("end")).map((i) => i.name) : [],
+        g.kind === "gear" ? g.items.filter((i) => i.tags.includes("end") || i.tags.includes("late")).map((i) => i.name) : [],
       ),
     ),
   ];

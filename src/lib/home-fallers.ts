@@ -96,7 +96,7 @@ function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
   const buckets = new Map<string, { label: string; query: string; pieces: Set<string> }>();
 
   for (const item of uniqueCatalogItems(catalog)) {
-    if (!item.tags.includes("end")) continue;
+    if (!(item.tags.includes("end") || item.tags.includes("late"))) continue;
     if (isThirdAge(item.name)) continue;
     if (!item.tags.some((t) => ARMOUR_SLOTS.has(t))) continue;
     const prefix = familyFor(item.name);
@@ -116,10 +116,11 @@ function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
     .map(([key, b]) => ({ key, label: b.label, query: b.query, pieces: [...b.pieces] }));
 }
 
-export function endgameFallers(
+export function lateEndgameOpportunities(
   rows: PriceRow[],
   trends: Record<number, Trend> | undefined,
-  limit = 6,
+  mode: "buy" | "sell" = "buy",
+  limit = 10,
 ): HomeFaller[] {
   const catalog = catalogByName();
   const families = buildSetFamilies(catalog);
@@ -143,7 +144,9 @@ export function endgameFallers(
     kind: HomeFaller["kind"],
     key: string,
   ) => {
-    if (!Number.isFinite(change) || change >= 0) return;
+    if (!Number.isFinite(change)) return;
+    if (mode === "buy" && change >= 0) return;
+    if (mode === "sell" && change <= 0) return;
     if (price < 1_000) return;
     out.push({ key, name, query, icon, itemId, price, change, kind });
   };
@@ -168,26 +171,27 @@ export function endgameFallers(
 
     let total = 0;
     let base = 0;
-    let worst = pieces[0]!;
-    let worstChange = rangeChange(trends?.[worst.id]);
+    let extreme = pieces[0]!;
+    let extremeChange = rangeChange(trends?.[extreme.id]);
     for (const row of pieces) {
       const price = priceOf(row);
       const change = rangeChange(trends?.[row.id]);
       total += price;
       const implied = baselinePrice(price, change);
       base += implied ?? price;
-      if (change < worstChange) {
-        worst = row;
-        worstChange = change;
+      const isBetter = mode === "buy" ? change < extremeChange : change > extremeChange;
+      if (isBetter) {
+        extreme = row;
+        extremeChange = change;
       }
     }
     const setChange =
-      base > 0 ? Math.round(((total - base) / base) * 1000) / 10 : worstChange;
+      base > 0 ? Math.round(((total - base) / base) * 1000) / 10 : extremeChange;
     consider(
       family.label,
       family.query,
-      worst.icon,
-      worst.id,
+      extreme.icon,
+      extreme.id,
       total,
       setChange,
       "set",
@@ -199,7 +203,7 @@ export function endgameFallers(
     const item =
       catalog.get(row.name.toLowerCase()) ?? catalog.get(geLookupName(row.name).toLowerCase());
     if (!item) continue;
-    if (!item.tags.includes("end")) continue;
+    if (!(item.tags.includes("end") || item.tags.includes("late"))) continue;
     if (isThirdAge(row.name) || isThirdAge(item.name)) continue;
     if (
       used.has(row.name.toLowerCase()) ||
@@ -220,5 +224,17 @@ export function endgameFallers(
     );
   }
 
-  return out.sort((a, b) => a.change - b.change || b.price - a.price).slice(0, limit);
+  const sorted = mode === "buy"
+    ? out.sort((a, b) => a.change - b.change || b.price - a.price)
+    : out.sort((a, b) => b.change - a.change || b.price - a.price);
+  return sorted.slice(0, limit);
+}
+
+/** @deprecated Use lateEndgameOpportunities with mode "buy" */
+export function endgameFallers(
+  rows: PriceRow[],
+  trends: Record<number, Trend> | undefined,
+  limit = 6,
+): HomeFaller[] {
+  return lateEndgameOpportunities(rows, trends, "buy", limit);
 }

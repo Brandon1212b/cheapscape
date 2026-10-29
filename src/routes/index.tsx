@@ -1,14 +1,13 @@
 import { useEffect, useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
+import { ArrowRight, ChartLine } from "lucide-react";
 
 import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useEndgameTrends } from "@/hooks/useEndgameTrends";
-import { compactNum, gp } from "@/lib/format";
-import { homeMethodRates } from "@/lib/home-highlights";
-import { endgameFallers, type HomeFaller } from "@/lib/home-fallers";
+import { gp } from "@/lib/format";
+import { lateEndgameOpportunities, type HomeFaller } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import { buildPriceRowsByName } from "@/lib/price-lookup";
 
@@ -56,35 +55,21 @@ function LandingPage() {
     void navigate({ to: "/prices", search: record as never, replace: true });
   }, [location.search, navigate]);
 
-  const fallers = useMemo(
-    () => endgameFallers(snapshot.data ?? [], endgameTrends.data, 6),
+  const buyers = useMemo(
+    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "buy", 10),
     [snapshot.data, endgameTrends.data],
   );
-
-  const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
-
-  const savedMethods = lastTabSearch("/methods");
-  const moneyPerHour =
-    typeof savedMethods.g === "number" && Number.isFinite(savedMethods.g)
-      ? savedMethods.g
-      : 2_000_000;
-  const methods = useMemo(
-    () => homeMethodRates(rowsByName, moneyPerHour),
-    [rowsByName, moneyPerHour],
+  const sellers = useMemo(
+    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "sell", 10),
+    [snapshot.data, endgameTrends.data],
   );
 
   const pricesSearch = {
     ...lastTabSearch("/prices"),
     filter: "gear",
-    tier: "end",
+    tier: "all",
     sort: "losers",
     range: "1m",
-  };
-
-  const openSkill = (skill: string) => {
-    writeLastSkill(skill);
-    writeTabSearch("/methods", { skill });
-    void navigate({ to: "/methods", search: { skill } });
   };
 
   return (
@@ -99,15 +84,15 @@ function LandingPage() {
       <div className="mt-6 grid gap-3 md:grid-cols-2">
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top fallers · 1 month</h2>
+            <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Endgame gear
+              Late & endgame
             </span>
           </div>
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="h-11 animate-pulse rounded-md bg-secondary/40" />
               ))}
             </div>
@@ -119,15 +104,15 @@ function LandingPage() {
             </p>
           )}
 
-          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && fallers.length === 0 && (
+          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && buyers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No endgame gear is down over the last month.
+              No late/endgame gear is down over the last month.
             </p>
           )}
 
           {!snapshot.isLoading && fallers.length > 0 && (
             <ul className="divide-y divide-border/40">
-              {fallers.map((row) => (
+              {buyers.map((row) => (
                 <li key={row.key}>
                   <HomeFallerLink row={row} pricesSearch={pricesSearch} />
                 </li>
@@ -151,70 +136,53 @@ function LandingPage() {
 
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top methods</h2>
+            <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Best cost
+              Late & endgame
             </span>
           </div>
 
-          <ul className="grid grid-cols-2 gap-x-2 divide-y divide-border/40">
-            {methods.map((row) => (
-              <li key={row.skill} className="min-w-0">
-                <Link
-                  to="/methods"
-                  search={{ skill: row.skill }}
-                  href={`/methods?skill=${encodeURIComponent(row.skill)}`}
-                  onClick={() => {
-                    writeLastSkill(row.skill);
-                    writeTabSearch("/methods", { skill: row.skill });
-                  }}
-                  className="flex items-start gap-2 py-1.5 hover:bg-secondary/30"
-                >
-                  <WikiImage
-                    icon={row.skillIcon}
-                    alt=""
-                    width={22}
-                    height={22}
-                    lazy={false}
-                    className="mt-0.5 size-5 shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium leading-tight">{row.method}</span>
-                    <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
-                      {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "—"}
-                      {" \u00b7 "}
-                      <span
-                        style={{
-                          color:
-                            row.gpPerHour == null
-                              ? undefined
-                              : row.gpPerHour >= 0
-                                ? "var(--deal)"
-                                : "var(--steep)",
-                        }}
-                      >
-                        {row.gpPerHour != null ? `${gp(row.gpPerHour)}` : "—"}
-                      </span>
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
+            <div className="space-y-2">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="h-11 animate-pulse rounded-md bg-secondary/40" />
+              ))}
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={() =>
-              openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")
-            }
+          {snapshot.isError && (
+            <p className="py-6 text-center text-sm text-destructive">
+              Couldn't load live prices right now.
+            </p>
+          )}
+
+          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && sellers.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No late/endgame gear is up over the last month.
+            </p>
+          )}
+
+          {!snapshot.isLoading && sellers.length > 0 && (
+            <ul className="divide-y divide-border/40">
+              {sellers.map((row) => (
+                <li key={row.key}>
+                  <HomeFallerLink row={row} pricesSearch={pricesSearch} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <Link
+            to="/prices"
+            search={{ ...pricesSearch, sort: "gainers" } as never}
             className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            <Pickaxe className="size-4" />
-            Skilling methods
+            <ChartLine className="size-4" />
+            Open prices
             <ArrowRight className="size-4" />
-          </button>
+          </Link>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Skilling methods right from the wiki with the ability to account for opportunity cost
+            Biggest risers among late and endgame gear
           </p>
         </section>
       </div>
@@ -260,8 +228,8 @@ function HomeFallerLink({
         )}
       </span>
       <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
-      <span className="w-12 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color: "var(--deal)" }}>
-        {row.change}%
+      <span className="w-12 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color: row.change >= 0 ? "var(--deal)" : "var(--steep)" }}>
+        {row.change > 0 ? "+" : ""}{row.change}%
       </span>
     </>
   );

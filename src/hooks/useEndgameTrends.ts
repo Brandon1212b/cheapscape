@@ -5,10 +5,10 @@ import { fetchEndgameTrends } from "@/lib/osrs.functions";
 import { readClientCache, writeClientCache } from "@/lib/client-cache";
 import type { Trend } from "@/lib/osrs.server";
 
-const KEY = "osrs-trends:1m-endgame";
+const KEY = "osrs-trends:1m-late-end";
 const TTL = 45 * 60_000;
 
-/** 1-month trends for endgame gear only — used by homepage fallers. */
+/** 1-month trends for late and endgame gear — used by homepage fallers. */
 export function useEndgameTrends() {
   const fn = useServerFn(fetchEndgameTrends);
   const trends = useQuery({
