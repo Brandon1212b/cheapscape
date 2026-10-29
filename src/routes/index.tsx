@@ -214,13 +214,13 @@ function LandingPage() {
 
 function ChangeHeader() {
   return (
-    <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-      <span className="size-5 shrink-0" />
+    <div className="flex items-center gap-1 pb-1 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="size-4 shrink-0" />
       <span className="min-w-0 flex-1">Item</span>
-      <span className="w-16 shrink-0 text-right">Price</span>
-      <span className="w-11 shrink-0 text-right">1D</span>
-      <span className="w-11 shrink-0 text-right">7D</span>
-      <span className="w-11 shrink-0 text-right">30D</span>
+      <span className="w-12 shrink-0 text-right">Price</span>
+      <span className="w-9 shrink-0 text-right">1D</span>
+      <span className="w-9 shrink-0 text-right">7D</span>
+      <span className="w-9 shrink-0 text-right">30D</span>
     </div>
   );
 }
@@ -228,13 +228,13 @@ function ChangeHeader() {
 function ChangeCell({ value }: { value: number }) {
   const color = value >= 0 ? "var(--deal)" : "var(--steep)";
   return (
-    <span className="w-11 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color }}>
-      {value > 0 ? "+" : ""}{value}%
+    <span className="w-9 shrink-0 text-right text-[11px] font-bold tabular-nums leading-none" style={{ color }}>
+      {value > 0 ? "+" : ""}{Math.round(value)}
     </span>
   );
 }
 
-const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
+const FALLER_ROW_CLASS = "flex items-center gap-1 py-1.5 hover:bg-secondary/30";
 
 /** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
@@ -246,16 +246,18 @@ function HomeFallerLink({
 }) {
   const inner = (
     <>
-      <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+      <WikiImage icon={row.icon} alt="" width={18} height={18} className="size-4 shrink-0" />
+      <span className="min-w-0 flex-1 truncate text-xs font-medium sm:text-sm">
         {row.name}
         {row.kind === "set" && (
-          <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="ml-1 align-middle text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
             set
           </span>
         )}
       </span>
-      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <span className="w-12 shrink-0 text-right text-[11px] font-semibold tabular-nums gold-text sm:text-xs">
+        {gp(row.price)}
+      </span>
       <ChangeCell value={row.change1} />
       <ChangeCell value={row.change7} />
       <ChangeCell value={row.change30} />
