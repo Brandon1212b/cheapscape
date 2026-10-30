@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, ChartLine, ChevronDown, Pickaxe } from "lucide-react";
+import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
 
 import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
@@ -17,6 +17,13 @@ export type { HomeSearch } from "./prices";
 /** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
+
+const PERIODS: Period[] = ["1", "7", "30"];
+
+function nextPeriod(p: Period): Period {
+  const i = PERIODS.indexOf(p);
+  return PERIODS[(i + 1) % PERIODS.length]!;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -345,25 +352,20 @@ function ChangeHeader({
   period: Period;
   setPeriod: (p: Period) => void;
 }) {
+  const label = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
   return (
     <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       <span className="size-5 shrink-0" />
       <span className="min-w-0 flex-1 text-left">Item</span>
       <span className="hidden w-10 shrink-0 sm:block" />
       <span className="w-16 shrink-0 text-right">Price</span>
-      <div className="relative w-10 shrink-0 text-right">
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as Period)}
-          className="w-full appearance-none bg-transparent pr-2 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
-          style={{ fontSize: "10px", lineHeight: "1", height: "14px" }}
-        >
-          <option value="1">1D</option>
-          <option value="7">7D</option>
-          <option value="30">30D</option>
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-0 top-0 size-2.5" />
-      </div>
+      <button
+        type="button"
+        onClick={() => setPeriod(nextPeriod(period))}
+        className="w-10 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
+        {label}
+      </button>
     </div>
   );
 }
