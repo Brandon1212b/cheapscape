@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, ChartLine, ChevronDown } from "lucide-react";
+import { ArrowRight, ChartLine, ChevronDown, Pickaxe } from "lucide-react";
 
 import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useEndgameTrends } from "@/hooks/useEndgameTrends";
-import { gp } from "@/lib/format";
+import { compactNum, gp } from "@/lib/format";
+import { homeMethodRates } from "@/lib/home-highlights";
 import { lateEndgameOpportunities, type HomeFaller, type Period } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import { buildPriceRowsByName } from "@/lib/price-lookup";
@@ -82,6 +83,18 @@ function LandingPage() {
     [allSellers, includeUnder1m],
   );
 
+  const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
+
+  const savedMethods = lastTabSearch("/methods");
+  const moneyPerHour =
+    typeof savedMethods.g === "number" && Number.isFinite(savedMethods.g)
+      ? savedMethods.g
+      : 2_000_000;
+  const methods = useMemo(
+    () => homeMethodRates(rowsByName, moneyPerHour),
+    [rowsByName, moneyPerHour],
+  );
+
   const pricesSearch = {
     ...lastTabSearch("/prices"),
     filter: "gear",
@@ -91,6 +104,12 @@ function LandingPage() {
   };
 
   const periodLabel = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
+
+  const openSkill = (skill: string) => {
+    writeLastSkill(skill);
+    writeTabSearch("/methods", { skill });
+    void navigate({ to: "/methods", search: { skill } });
+  };
 
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
@@ -208,6 +227,75 @@ function LandingPage() {
           </p>
         </section>
       </div>
+
+      <section className="panel mt-3 flex flex-col p-3 sm:p-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Top methods</h2>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Best cost
+          </span>
+        </div>
+
+        <ul className="grid grid-cols-2 gap-x-2 divide-y divide-border/40 sm:grid-cols-3">
+          {methods.map((row) => (
+            <li key={row.skill} className="min-w-0">
+              <Link
+                to="/methods"
+                search={{ skill: row.skill }}
+                href={`/methods?skill=${encodeURIComponent(row.skill)}`}
+                onClick={() => {
+                  writeLastSkill(row.skill);
+                  writeTabSearch("/methods", { skill: row.skill });
+                }}
+                className="flex items-start gap-2 py-1.5 hover:bg-secondary/30"
+              >
+                <WikiImage
+                  icon={row.skillIcon}
+                  alt=""
+                  width={22}
+                  height={22}
+                  lazy={false}
+                  className="mt-0.5 size-5 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium leading-tight">{row.method}</span>
+                  <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
+                    {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "—"}
+                    {" · "}
+                    <span
+                      style={{
+                        color:
+                          row.gpPerHour == null
+                            ? undefined
+                            : row.gpPerHour >= 0
+                              ? "var(--deal)"
+                              : "var(--steep)",
+                      }}
+                    >
+                      {row.gpPerHour != null ? `${gp(row.gpPerHour)}` : "—"}
+                    </span>
+                  </p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          onClick={() =>
+            openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")
+          }
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          <Pickaxe className="size-4" />
+          Skilling methods
+          <ArrowRight className="size-4" />
+        </button>
+        <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
+          Skilling methods right from the wiki with the ability to account for opportunity cost
+        </p>
+      </section>
 
       <p className="mx-auto mt-4 max-w-lg text-center text-[10px] leading-snug text-muted-foreground/80">
         Cheapscape is a fan project. Created using intellectual property belonging to Jagex Limited
