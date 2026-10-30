@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, ChartLine, ChevronDown } from "lucide-react";
+import { ArrowRight, ChartLine } from "lucide-react";
 
 import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
@@ -10,7 +10,6 @@ import { gp } from "@/lib/format";
 import { lateEndgameOpportunities, type HomeFaller, type Period } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import { buildPriceRowsByName } from "@/lib/price-lookup";
-import { Slider } from "@/components/ui/slider";
 
 export type { HomeSearch } from "./prices";
 
@@ -18,34 +17,14 @@ export type { HomeSearch } from "./prices";
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
-const PRICE_MAX = 1_000_000_000;
-const PRICE_MID = 10_000_000;
+type PriceBucket = "0-10" | "11-50" | "50-200" | "200+";
 
-/** Map a 0-100 slider position to a price with 1m steps to 10m, then 10m steps to 1B. */
-function sliderToPrice(pos: number): number {
-  if (pos <= 0) return 0;
-  if (pos >= 100) return PRICE_MAX;
-  // First 10% of slider = 0 to 10m in 1m steps (10 steps)
-  if (pos <= 10) {
-    const step = Math.round((pos / 10) * 10);
-    return step * 1_000_000;
-  }
-  // Remaining 90% = 10m to 1B in 10m steps
-  const remaining = (pos - 10) / 90;
-  const steps = Math.round(remaining * ((PRICE_MAX - PRICE_MID) / 10_000_000));
-  return PRICE_MID + steps * 10_000_000;
-}
-
-/** Inverse: price to 0-100 slider position. */
-function priceToSlider(price: number): number {
-  if (price <= 0) return 0;
-  if (price >= PRICE_MAX) return 100;
-  if (price <= PRICE_MID) {
-    return (price / PRICE_MID) * 10;
-  }
-  const remaining = (price - PRICE_MID) / (PRICE_MAX - PRICE_MID);
-  return 10 + remaining * 90;
-}
+const BUCKETS: { id: PriceBucket; label: string; min: number; max: number }[] = [
+  { id: "0-10", label: "0–10M", min: 0, max: 10_000_000 },
+  { id: "11-50", label: "11–50M", min: 11_000_000, max: 50_000_000 },
+  { id: "50-200", label: "50–200M", min: 50_000_000, max: 200_000_000 },
+  { id: "200+", label: "200M+", min: 200_000_000, max: Infinity },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -74,7 +53,7 @@ function LandingPage() {
   const endgameTrends = useEndgameTrends();
 
   const [period, setPeriod] = useState<Period>("30");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, PRICE_MAX]);
+  const [bucket, setBucket] = useState<PriceBucket>("0-10");
 
   useEffect(() => {
     const search = location.search;
@@ -97,13 +76,15 @@ function LandingPage() {
     [snapshot.data, endgameTrends.data, period],
   );
 
+  const activeBucket = BUCKETS.find((b) => b.id === bucket)!;
+
   const buyers = useMemo(
-    () => allBuyers.filter((r) => r.price >= priceRange[0] && r.price <= priceRange[1]).slice(0, 10),
-    [allBuyers, priceRange],
+    () => allBuyers.filter((r) => r.price >= activeBucket.min && r.price <= activeBucket.max).slice(0, 10),
+    [allBuyers, activeBucket],
   );
   const sellers = useMemo(
-    () => allSellers.filter((r) => r.price >= priceRange[0] && r.price <= priceRange[1]).slice(0, 10),
-    [allSellers, priceRange],
+    () => allSellers.filter((r) => r.price >= activeBucket.min && r.price <= activeBucket.max).slice(0, 10),
+    [allSellers, activeBucket],
   );
 
   const pricesSearch = {
@@ -114,7 +95,7 @@ function LandingPage() {
     range: "1m",
   };
 
-  const periodLabel = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
+  const periodLabel = period === "1" ? "1D" : "30D";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
@@ -125,30 +106,39 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-4">
-        <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <span>Price range</span>
-          <span className="tabular-nums">
-            {gp(priceRange[0])} – {priceRange[1] >= PRICE_MAX ? "1B" : gp(priceRange[1])}
-          </span>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary/20 p-0.5">
+          {(["1", "30"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPeriod(p)}
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
+                period === p
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              }`}
+            >
+              {p === "1" ? "1D" : "30D"}
+            </button>
+          ))}
         </div>
-        <Slider
-          min={0}
-          max={100}
-          step={0.5}
-          value={[priceToSlider(priceRange[0]), priceToSlider(priceRange[1])]}
-          onValueChange={(v) => {
-            const [a, b] = v as [number, number];
-            const lo = sliderToPrice(a);
-            const hi = sliderToPrice(b);
-            setPriceRange([Math.min(lo, hi), Math.max(lo, hi)]);
-          }}
-        />
-        <div className="mt-1 flex justify-between text-[9px] text-muted-foreground/70">
-          <span>0</span>
-          <span>10M</span>
-          <span>100M</span>
-          <span>1B</span>
+
+        <div className="flex flex-wrap gap-1">
+          {BUCKETS.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => setBucket(b.id)}
+              className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                bucket === b.id
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border/60 text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+              }`}
+            >
+              {b.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -156,9 +146,6 @@ function LandingPage() {
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Late & endgame
-            </span>
           </div>
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
@@ -177,13 +164,13 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && buyers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No late/endgame gear is down over the last {periodLabel.toLowerCase()}.
+              No gear is down over the last {periodLabel.toLowerCase()} in this price range.
             </p>
           )}
 
           {!snapshot.isLoading && buyers.length > 0 && (
             <>
-              <ChangeHeader period={period} setPeriod={setPeriod} />
+              <ChangeHeader period={periodLabel} />
               <ul className="divide-y divide-border/40">
                 {buyers.map((row) => (
                   <li key={row.key}>
@@ -211,9 +198,6 @@ function LandingPage() {
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Late & endgame
-            </span>
           </div>
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
@@ -232,13 +216,13 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && sellers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No late/endgame gear is up over the last {periodLabel.toLowerCase()}.
+              No gear is up over the last {periodLabel.toLowerCase()} in this price range.
             </p>
           )}
 
           {!snapshot.isLoading && sellers.length > 0 && (
             <>
-              <ChangeHeader period={period} setPeriod={setPeriod} />
+              <ChangeHeader period={periodLabel} />
               <ul className="divide-y divide-border/40">
                 {sellers.map((row) => (
                   <li key={row.key}>
@@ -259,7 +243,7 @@ function LandingPage() {
             <ArrowRight className="size-4" />
           </Link>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Biggest risers among late and endgame gear
+            Biggest risers among gear
           </p>
         </section>
       </div>
@@ -283,31 +267,14 @@ function LandingPage() {
   );
 }
 
-function ChangeHeader({
-  period,
-  setPeriod,
-}: {
-  period: Period;
-  setPeriod: (p: Period) => void;
-}) {
+function ChangeHeader({ period }: { period: string }) {
   return (
     <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       <span className="size-5 shrink-0" />
       <span className="min-w-0 max-w-[7rem] flex-1 sm:max-w-[9rem]">Item</span>
       <span className="hidden w-10 shrink-0 sm:block" />
       <span className="w-14 shrink-0 text-right">Price</span>
-      <div className="relative w-12 shrink-0 text-right">
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as Period)}
-          className="w-full appearance-none bg-transparent pr-3 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
-        >
-          <option value="1">1D</option>
-          <option value="7">7D</option>
-          <option value="30">30D</option>
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-0 top-0.5 size-3" />
-      </div>
+      <span className="w-11 shrink-0 text-right">{period}</span>
     </div>
   );
 }
@@ -385,7 +352,7 @@ function HomeFallerLink({
   pricesSearch: Record<string, unknown>;
   period: Period;
 }) {
-  const change = period === "1" ? row.change1 : period === "7" ? row.change7 : row.change30;
+  const change = period === "1" ? row.change1 : row.change30;
   const inner = (
     <>
       <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
