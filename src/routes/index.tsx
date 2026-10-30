@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, ChartLine } from "lucide-react";
+import { ArrowRight, ChartLine, ChevronDown } from "lucide-react";
 
 import { CheapscapeWordmark } from "@/components/BrandSurface";
 import { WikiImage } from "@/components/WikiImage";
@@ -95,7 +95,7 @@ function LandingPage() {
     range: "1m",
   };
 
-  const periodLabel = period === "1" ? "1D" : "30D";
+  const periodLabel = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
@@ -106,40 +106,21 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary/20 p-0.5">
-          {(["1", "30"] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(p)}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
-                period === p
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-              }`}
-            >
-              {p === "1" ? "1D" : "30D"}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {BUCKETS.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setBucket(b.id)}
-              className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
-                bucket === b.id
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border/60 text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
-              }`}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
+      <div className="mt-4 flex flex-wrap gap-1">
+        {BUCKETS.map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => setBucket(b.id)}
+            className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
+              bucket === b.id
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border/60 text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -170,7 +151,7 @@ function LandingPage() {
 
           {!snapshot.isLoading && buyers.length > 0 && (
             <>
-              <ChangeHeader period={periodLabel} />
+              <ChangeHeader period={period} setPeriod={setPeriod} />
               <ul className="divide-y divide-border/40">
                 {buyers.map((row) => (
                   <li key={row.key}>
@@ -222,7 +203,7 @@ function LandingPage() {
 
           {!snapshot.isLoading && sellers.length > 0 && (
             <>
-              <ChangeHeader period={periodLabel} />
+              <ChangeHeader period={period} setPeriod={setPeriod} />
               <ul className="divide-y divide-border/40">
                 {sellers.map((row) => (
                   <li key={row.key}>
@@ -267,14 +248,31 @@ function LandingPage() {
   );
 }
 
-function ChangeHeader({ period }: { period: string }) {
+function ChangeHeader({
+  period,
+  setPeriod,
+}: {
+  period: Period;
+  setPeriod: (p: Period) => void;
+}) {
   return (
     <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       <span className="size-5 shrink-0" />
-      <span className="min-w-0 max-w-[7rem] flex-1 sm:max-w-[9rem]">Item</span>
+      <span className="min-w-0 flex-1 text-left">Item</span>
       <span className="hidden w-10 shrink-0 sm:block" />
-      <span className="w-14 shrink-0 text-right">Price</span>
-      <span className="w-11 shrink-0 text-right">{period}</span>
+      <span className="w-16 shrink-0 text-right">Price</span>
+      <div className="relative w-12 shrink-0 text-right">
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as Period)}
+          className="w-full appearance-none bg-transparent pr-3 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
+        >
+          <option value="1">1D</option>
+          <option value="7">7D</option>
+          <option value="30">30D</option>
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-0 top-0.5 size-3" />
+      </div>
     </div>
   );
 }
@@ -286,7 +284,7 @@ function ChangeCell({ value }: { value: number }) {
   const opacity = 0.45 + intensity * 0.55;
   return (
     <span
-      className="w-11 shrink-0 text-right text-xs font-bold tabular-nums"
+      className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
       style={{ color: base, opacity }}
     >
       {value > 0 ? "+" : ""}{value}%
@@ -352,11 +350,11 @@ function HomeFallerLink({
   pricesSearch: Record<string, unknown>;
   period: Period;
 }) {
-  const change = period === "1" ? row.change1 : row.change30;
+  const change = period === "1" ? row.change1 : period === "7" ? row.change7 : row.change30;
   const inner = (
     <>
       <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
-      <span className="min-w-0 max-w-[7rem] flex-1 truncate text-sm font-medium sm:max-w-[9rem]">
+      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">
         {row.name}
         {row.kind === "set" && (
           <span className="ml-1 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -366,7 +364,7 @@ function HomeFallerLink({
         <NearTag row={row} />
       </span>
       <TinySparkline series={row.series} />
-      <span className="w-14 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
       <ChangeCell value={change} />
     </>
   );
