@@ -44,7 +44,7 @@ function LandingPage() {
   const endgameTrends = useEndgameTrends();
 
   const [period, setPeriod] = useState<Period>("30");
-  const [includeUnder1m, setIncludeUnder1m] = useState(true);
+  const [includeUnder1m, setIncludeUnder1m] = useState(false);
 
   useEffect(() => {
     const search = location.search;
