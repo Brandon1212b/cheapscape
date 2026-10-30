@@ -105,9 +105,8 @@ function LandingPage() {
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
+            <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
-
-          <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
@@ -159,9 +158,8 @@ function LandingPage() {
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
+            <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
-
-          <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
@@ -241,13 +239,13 @@ function Under1mToggle({
     <button
       type="button"
       onClick={() => setIncludeUnder1m(!includeUnder1m)}
-      className={`mb-2 rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+      className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition-colors ${
         includeUnder1m
           ? "bg-primary/15 text-primary"
           : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
       }`}
     >
-      {includeUnder1m ? "Including under 1M" : "Excluding under 1M"}
+      {includeUnder1m ? "Under 1M" : "No under 1M"}
     </button>
   );
 }
@@ -265,18 +263,18 @@ function ChangeHeader({
       <span className="min-w-0 flex-1 text-left">Item</span>
       <span className="hidden w-10 shrink-0 sm:block" />
       <span className="w-16 shrink-0 text-right">Price</span>
-      <div className="relative w-12 shrink-0 text-right">
+      <div className="relative w-10 shrink-0 text-right">
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value as Period)}
-          className="w-full appearance-none bg-transparent pr-3 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
-          style={{ fontSize: "10px" }}
+          className="w-full appearance-none bg-transparent pr-2 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
+          style={{ fontSize: "10px", lineHeight: "1", height: "14px" }}
         >
-          <option value="1" style={{ fontSize: "10px" }}>1D</option>
-          <option value="7" style={{ fontSize: "10px" }}>7D</option>
-          <option value="30" style={{ fontSize: "10px" }}>30D</option>
+          <option value="1">1D</option>
+          <option value="7">7D</option>
+          <option value="30">30D</option>
         </select>
-        <ChevronDown className="pointer-events-none absolute right-0 top-0.5 size-3" />
+        <ChevronDown className="pointer-events-none absolute right-0 top-0 size-2.5" />
       </div>
     </div>
   );
