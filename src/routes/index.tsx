@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, ChartLine, Pickaxe } from "lucide-react";
 
@@ -8,7 +8,7 @@ import { useMarketData } from "@/hooks/useMarketData";
 import { useEndgameTrends } from "@/hooks/useEndgameTrends";
 import { compactNum, gp } from "@/lib/format";
 import { homeMethodRates } from "@/lib/home-highlights";
-import { endgameFallers, type HomeFaller } from "@/lib/home-fallers";
+import { lateEndgameOpportunities, type HomeFaller, type Period } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import { buildPriceRowsByName } from "@/lib/price-lookup";
 
@@ -17,6 +17,13 @@ export type { HomeSearch } from "./prices";
 /** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
+
+const PERIODS: Period[] = ["1", "7", "30"];
+
+function nextPeriod(p: Period): Period {
+  const i = PERIODS.indexOf(p);
+  return PERIODS[(i + 1) % PERIODS.length]!;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +51,9 @@ function LandingPage() {
   const { snapshot } = useMarketData("1m", { trends: false });
   const endgameTrends = useEndgameTrends();
 
+  const [period, setPeriod] = useState<Period>("30");
+  const [includeUnder1m, setIncludeUnder1m] = useState(false);
+
   useEffect(() => {
     const search = location.search;
     if (!search || typeof search !== "object") return;
@@ -56,9 +66,28 @@ function LandingPage() {
     void navigate({ to: "/prices", search: record as never, replace: true });
   }, [location.search, navigate]);
 
-  const fallers = useMemo(
-    () => endgameFallers(snapshot.data ?? [], endgameTrends.data, 6),
-    [snapshot.data, endgameTrends.data],
+  const allBuyers = useMemo(
+    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "buy", 50, period),
+    [snapshot.data, endgameTrends.data, period],
+  );
+  const allSellers = useMemo(
+    () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "sell", 50, period),
+    [snapshot.data, endgameTrends.data, period],
+  );
+
+  const buyers = useMemo(
+    () =>
+      allBuyers
+        .filter((r) => includeUnder1m || r.price >= 1_000_000)
+        .slice(0, 10),
+    [allBuyers, includeUnder1m],
+  );
+  const sellers = useMemo(
+    () =>
+      allSellers
+        .filter((r) => includeUnder1m || r.price >= 1_000_000)
+        .slice(0, 10),
+    [allSellers, includeUnder1m],
   );
 
   const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
@@ -76,10 +105,12 @@ function LandingPage() {
   const pricesSearch = {
     ...lastTabSearch("/prices"),
     filter: "gear",
-    tier: "end",
+    tier: "all",
     sort: "losers",
     range: "1m",
   };
+
+  const periodLabel = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
 
   const openSkill = (skill: string) => {
     writeLastSkill(skill);
@@ -96,18 +127,16 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top fallers · 1 month</h2>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Endgame gear
-            </span>
+            <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
+            <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="h-11 animate-pulse rounded-md bg-secondary/40" />
               ))}
             </div>
@@ -119,20 +148,23 @@ function LandingPage() {
             </p>
           )}
 
-          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && fallers.length === 0 && (
+          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && buyers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No endgame gear is down over the last month.
+              No gear is down over the last {periodLabel.toLowerCase()}.
             </p>
           )}
 
-          {!snapshot.isLoading && fallers.length > 0 && (
-            <ul className="divide-y divide-border/40">
-              {fallers.map((row) => (
-                <li key={row.key}>
-                  <HomeFallerLink row={row} pricesSearch={pricesSearch} />
-                </li>
-              ))}
-            </ul>
+          {!snapshot.isLoading && buyers.length > 0 && (
+            <>
+              <ChangeHeader period={period} setPeriod={setPeriod} />
+              <ul className="divide-y divide-border/40">
+                {buyers.map((row) => (
+                  <li key={row.key}>
+                    <HomeFallerLink row={row} pricesSearch={pricesSearch} period={period} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           <Link
@@ -151,73 +183,126 @@ function LandingPage() {
 
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top methods</h2>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Best cost
-            </span>
+            <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
+            <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
 
-          <ul className="grid grid-cols-2 gap-x-2 divide-y divide-border/40">
-            {methods.map((row) => (
-              <li key={row.skill} className="min-w-0">
-                <Link
-                  to="/methods"
-                  search={{ skill: row.skill }}
-                  href={`/methods?skill=${encodeURIComponent(row.skill)}`}
-                  onClick={() => {
-                    writeLastSkill(row.skill);
-                    writeTabSearch("/methods", { skill: row.skill });
-                  }}
-                  className="flex items-start gap-2 py-1.5 hover:bg-secondary/30"
-                >
-                  <WikiImage
-                    icon={row.skillIcon}
-                    alt=""
-                    width={22}
-                    height={22}
-                    lazy={false}
-                    className="mt-0.5 size-5 shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium leading-tight">{row.method}</span>
-                    <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
-                      {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "—"}
-                      {" \u00b7 "}
-                      <span
-                        style={{
-                          color:
-                            row.gpPerHour == null
-                              ? undefined
-                              : row.gpPerHour >= 0
-                                ? "var(--deal)"
-                                : "var(--steep)",
-                        }}
-                      >
-                        {row.gpPerHour != null ? `${gp(row.gpPerHour)}` : "—"}
-                      </span>
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
+            <div className="space-y-2">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="h-11 animate-pulse rounded-md bg-secondary/40" />
+              ))}
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={() =>
-              openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")
-            }
+          {snapshot.isError && (
+            <p className="py-6 text-center text-sm text-destructive">
+              Couldn't load live prices right now.
+            </p>
+          )}
+
+          {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && sellers.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No gear is up over the last {periodLabel.toLowerCase()}.
+            </p>
+          )}
+
+          {!snapshot.isLoading && sellers.length > 0 && (
+            <>
+              <ChangeHeader period={period} setPeriod={setPeriod} />
+              <ul className="divide-y divide-border/40">
+                {sellers.map((row) => (
+                  <li key={row.key}>
+                    <HomeFallerLink row={row} pricesSearch={pricesSearch} period={period} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          <Link
+            to="/prices"
+            search={{ ...pricesSearch, sort: "gainers" } as never}
             className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            <Pickaxe className="size-4" />
-            Skilling methods
+            <ChartLine className="size-4" />
+            Open prices
             <ArrowRight className="size-4" />
-          </button>
+          </Link>
           <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
-            Skilling methods right from the wiki with the ability to account for opportunity cost
+            Biggest risers among gear
           </p>
         </section>
       </div>
+
+      <section className="panel mt-3 flex flex-col p-3 sm:p-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Top methods</h2>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Best cost
+          </span>
+        </div>
+
+        <ul className="grid grid-cols-2 gap-x-2 divide-y divide-border/40 sm:grid-cols-3">
+          {methods.map((row) => (
+            <li key={row.skill} className="min-w-0">
+              <Link
+                to="/methods"
+                search={{ skill: row.skill }}
+                href={`/methods?skill=${encodeURIComponent(row.skill)}`}
+                onClick={() => {
+                  writeLastSkill(row.skill);
+                  writeTabSearch("/methods", { skill: row.skill });
+                }}
+                className="flex items-start gap-2 py-1.5 hover:bg-secondary/30"
+              >
+                <WikiImage
+                  icon={row.skillIcon}
+                  alt=""
+                  width={22}
+                  height={22}
+                  lazy={false}
+                  className="mt-0.5 size-5 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium leading-tight">{row.method}</span>
+                  <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
+                    {row.xpPerHour != null ? `${compactNum(row.xpPerHour)} xp/h` : "—"}
+                    {" · "}
+                    <span
+                      style={{
+                        color:
+                          row.gpPerHour == null
+                            ? undefined
+                            : row.gpPerHour >= 0
+                              ? "var(--deal)"
+                              : "var(--steep)",
+                      }}
+                    >
+                      {row.gpPerHour != null ? `${gp(row.gpPerHour)}` : "—"}
+                    </span>
+                  </p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          onClick={() =>
+            openSkill(typeof savedMethods.skill === "string" ? savedMethods.skill : "smithing")
+          }
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          <Pickaxe className="size-4" />
+          Skilling methods
+          <ArrowRight className="size-4" />
+        </button>
+        <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground">
+          Skilling methods right from the wiki with the ability to account for opportunity cost
+        </p>
+      </section>
 
       <p className="mx-auto mt-4 max-w-lg text-center text-[10px] leading-snug text-muted-foreground/80">
         Cheapscape is a fan project. Created using intellectual property belonging to Jagex Limited
@@ -238,31 +323,142 @@ function LandingPage() {
   );
 }
 
-const FALLER_ROW_CLASS = "flex items-center gap-2.5 py-2 hover:bg-secondary/30";
+function Under1mToggle({
+  includeUnder1m,
+  setIncludeUnder1m,
+}: {
+  includeUnder1m: boolean;
+  setIncludeUnder1m: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => setIncludeUnder1m(!includeUnder1m)}
+      className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition-colors ${
+        includeUnder1m
+          ? "bg-primary/15 text-primary"
+          : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+      }`}
+    >
+      {includeUnder1m ? "Under 1M" : "No under 1M"}
+    </button>
+  );
+}
+
+function ChangeHeader({
+  period,
+  setPeriod,
+}: {
+  period: Period;
+  setPeriod: (p: Period) => void;
+}) {
+  const label = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
+  return (
+    <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="size-5 shrink-0" />
+      <span className="min-w-0 flex-1 text-left">Item</span>
+      <span className="hidden w-10 shrink-0 sm:block" />
+      <span className="w-16 shrink-0 text-right">Price</span>
+      <button
+        type="button"
+        onClick={() => setPeriod(nextPeriod(period))}
+        className="w-10 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
+        {label}
+      </button>
+    </div>
+  );
+}
+
+function ChangeCell({ value }: { value: number }) {
+  const abs = Math.abs(value);
+  const intensity = Math.min(1, abs / 15);
+  const base = value >= 0 ? "var(--deal)" : "var(--steep)";
+  const opacity = 0.45 + intensity * 0.55;
+  return (
+    <span
+      className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
+      style={{ color: base, opacity }}
+    >
+      {value > 0 ? "+" : ""}{value}%
+    </span>
+  );
+}
+
+function TinySparkline({ series }: { series: { t: number; p: number }[] }) {
+  if (series.length < 2) return null;
+  const w = 40;
+  const h = 16;
+  const prices = series.map((s) => s.p);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const span = max - min || 1;
+  const pts = series.map((s, i) => {
+    const x = (i / (series.length - 1)) * w;
+    const y = h - ((s.p - min) / span) * (h - 2) - 1;
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const last = series[series.length - 1]!.p;
+  const first = series[0]!.p;
+  const up = last >= first;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="hidden h-4 w-10 shrink-0 sm:block" preserveAspectRatio="none" aria-hidden>
+      <path d={pts} fill="none" stroke={up ? "var(--deal)" : "var(--steep)"} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+function NearTag({ row }: { row: HomeFaller }) {
+  if (row.low180 == null || row.price <= 0) return null;
+  const dist = (row.price - row.low180) / row.price;
+  if (dist < 0.08 || (row.percentile != null && row.percentile <= 12)) {
+    return (
+      <span className="ml-1 align-middle rounded bg-steep/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-steep">
+        near low
+      </span>
+    );
+  }
+  if (row.high180 != null) {
+    const distHigh = (row.high180 - row.price) / row.price;
+    if (distHigh < 0.08 || (row.percentile != null && row.percentile >= 88)) {
+      return (
+        <span className="ml-1 align-middle rounded bg-deal/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-deal">
+          near high
+        </span>
+      );
+    }
+  }
+  return null;
+}
+
+const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
 
 /** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
   row,
   pricesSearch,
+  period,
 }: {
   row: HomeFaller;
   pricesSearch: Record<string, unknown>;
+  period: Period;
 }) {
+  const change = period === "1" ? row.change1 : period === "7" ? row.change7 : row.change30;
   const inner = (
     <>
       <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">
         {row.name}
         {row.kind === "set" && (
-          <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="ml-1 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             set
           </span>
         )}
+        <NearTag row={row} />
       </span>
-      <span className="shrink-0 text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
-      <span className="w-12 shrink-0 text-right text-xs font-bold tabular-nums" style={{ color: "var(--deal)" }}>
-        {row.change}%
-      </span>
+      <TinySparkline series={row.series} />
+      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <ChangeCell value={change} />
     </>
   );
 

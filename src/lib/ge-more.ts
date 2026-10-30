@@ -54,6 +54,8 @@ export function summarise(
 
   const first = prices[0]!;
   const changeWindow = first ? pctFrom(first) : 0;
+  const change1 = pctFrom(priceNear(1 * DAY));
+  const change7 = pctFrom(priceNear(7 * DAY));
   const change30 = pctFrom(priceNear(30 * DAY));
   const change90 = pctFrom(priceNear(90 * DAY));
 
@@ -66,6 +68,8 @@ export function summarise(
     low180: sorted[0]!,
     high180: sorted[sorted.length - 1]!,
     avg30,
+    change1,
+    change7,
     change30,
     change90,
     changeWindow,

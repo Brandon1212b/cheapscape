@@ -5,14 +5,14 @@ import { fetchEndgameTrends } from "@/lib/osrs.functions";
 import { readClientCache, writeClientCache } from "@/lib/client-cache";
 import type { Trend } from "@/lib/osrs.server";
 
-const KEY = "osrs-trends:1m-endgame";
+const KEY = "osrs-trends:6m-all-home";
 const TTL = 45 * 60_000;
 
-/** 1-month trends for endgame gear only — used by homepage fallers. */
+/** 6-month trends for all tracked items — used by homepage opportunities. */
 export function useEndgameTrends() {
   const fn = useServerFn(fetchEndgameTrends);
   const trends = useQuery({
-    queryKey: ["osrs-trends", "1m", "endgame"],
+    queryKey: ["osrs-trends", "6m", "all-home"],
     queryFn: () => fn(),
     staleTime: 30 * 60_000,
     placeholderData: () => readClientCache<Record<number, Trend>>(KEY, TTL),
