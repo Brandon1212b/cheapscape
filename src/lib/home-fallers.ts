@@ -2,7 +2,7 @@ import { CATALOG, type CatalogItem } from "@/lib/osrs-catalog";
 import { geLookupName } from "@/lib/ge-name-aliases";
 import type { PriceRow, Trend } from "@/lib/osrs.server";
 
-export type Period = "1" | "7" | "30";
+export type Period = "1" | "30";
 
 export type HomeFaller = {
   key: string;
@@ -12,7 +12,6 @@ export type HomeFaller = {
   itemId: number;
   price: number;
   change1: number;
-  change7: number;
   change30: number;
   series: { t: number; p: number }[];
   low180: number | null;
@@ -30,7 +29,7 @@ type SetFamily = {
 
 const ARMOUR_SLOTS = new Set(["head", "chest", "legs"]);
 
-/** Known multi-piece endgame armour. Weapons from the same brand stay as singles. */
+/** Known multi-piece armour. Weapons from the same brand stay as singles. */
 const SET_PREFIXES: { test: (n: string) => boolean; key: string; label: string; query: string }[] = [
   { test: (n) => n.startsWith("torva "), key: "torva", label: "Torva armour", query: "Torva" },
   { test: (n) => n.startsWith("justiciar "), key: "justiciar", label: "Justiciar armour", query: "Justiciar" },
@@ -64,7 +63,6 @@ function priceOf(row: PriceRow): number {
 function changeOf(trend: Trend | undefined, period: Period): number {
   if (!trend) return 0;
   if (period === "1") return trend.change1 ?? 0;
-  if (period === "7") return trend.change7 ?? 0;
   return trend.change30 ?? 0;
 }
 
@@ -107,7 +105,6 @@ function buildSetFamilies(catalog: Map<string, CatalogItem>): SetFamily[] {
   const buckets = new Map<string, { label: string; query: string; pieces: Set<string> }>();
 
   for (const item of uniqueCatalogItems(catalog)) {
-    if (!(item.tags.includes("end") || item.tags.includes("late"))) continue;
     if (isThirdAge(item.name)) continue;
     if (!item.tags.some((t) => ARMOUR_SLOTS.has(t))) continue;
     const prefix = familyFor(item.name);
@@ -167,7 +164,6 @@ export function lateEndgameOpportunities(
     itemId: number,
     price: number,
     change1: number,
-    change7: number,
     change30: number,
     series: { t: number; p: number }[],
     low180: number | null,
@@ -176,12 +172,12 @@ export function lateEndgameOpportunities(
     kind: HomeFaller["kind"],
     key: string,
   ) => {
-    const rankChange = period === "1" ? change1 : period === "7" ? change7 : change30;
+    const rankChange = period === "1" ? change1 : change30;
     if (!Number.isFinite(rankChange)) return;
     if (mode === "buy" && rankChange >= 0) return;
     if (mode === "sell" && rankChange <= 0) return;
     if (price < 1_000) return;
-    out.push({ key, name, query, icon, itemId, price, change1, change7, change30, series, low180, high180, percentile, kind });
+    out.push({ key, name, query, icon, itemId, price, change1, change30, series, low180, high180, percentile, kind });
   };
 
   for (const family of families) {
@@ -203,7 +199,6 @@ export function lateEndgameOpportunities(
     }
 
     const c1 = setChange(pieces, trends, "1");
-    const c7 = setChange(pieces, trends, "7");
     const c30 = setChange(pieces, trends, "30");
     const extreme = pieces.reduce((best, row) => {
       const ch = changeOf(trends?.[row.id], period);
@@ -219,7 +214,6 @@ export function lateEndgameOpportunities(
       extreme.id,
       pieces.reduce((s, r) => s + priceOf(r), 0),
       c1,
-      c7,
       c30,
       extremeTrend?.series ?? [],
       extremeTrend?.low180 ?? null,
@@ -234,7 +228,6 @@ export function lateEndgameOpportunities(
     const item =
       catalog.get(row.name.toLowerCase()) ?? catalog.get(geLookupName(row.name).toLowerCase());
     if (!item) continue;
-    if (!(item.tags.includes("end") || item.tags.includes("late"))) continue;
     if (isThirdAge(row.name) || isThirdAge(item.name)) continue;
     if (
       used.has(row.name.toLowerCase()) ||
@@ -251,7 +244,6 @@ export function lateEndgameOpportunities(
       row.id,
       priceOf(row),
       changeOf(trend, "1"),
-      changeOf(trend, "7"),
       changeOf(trend, "30"),
       trend?.series ?? [],
       trend?.low180 ?? null,
@@ -262,7 +254,7 @@ export function lateEndgameOpportunities(
     );
   }
 
-  const rankKey = (f: HomeFaller) => (period === "1" ? f.change1 : period === "7" ? f.change7 : f.change30);
+  const rankKey = (f: HomeFaller) => (period === "1" ? f.change1 : f.change30);
   const sorted =
     mode === "buy"
       ? out.sort((a, b) => rankKey(a) - rankKey(b) || b.price - a.price)
