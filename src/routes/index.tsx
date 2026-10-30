@@ -17,16 +17,6 @@ export type { HomeSearch } from "./prices";
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
-type PriceBucket = "0-1" | "1-5" | "5-10" | "10-50" | "50+";
-
-const BUCKETS: { id: PriceBucket; label: string; min: number; max: number }[] = [
-  { id: "0-1", label: "0–1M", min: 0, max: 1_000_000 },
-  { id: "1-5", label: "1–5M", min: 1_000_000, max: 5_000_000 },
-  { id: "5-10", label: "5–10M", min: 5_000_000, max: 10_000_000 },
-  { id: "10-50", label: "10–50M", min: 10_000_000, max: 50_000_000 },
-  { id: "50+", label: "50M+", min: 50_000_000, max: Infinity },
-];
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -54,7 +44,7 @@ function LandingPage() {
   const endgameTrends = useEndgameTrends();
 
   const [period, setPeriod] = useState<Period>("30");
-  const [bucket, setBucket] = useState<PriceBucket>("0-1");
+  const [includeUnder1m, setIncludeUnder1m] = useState(true);
 
   useEffect(() => {
     const search = location.search;
@@ -77,15 +67,19 @@ function LandingPage() {
     [snapshot.data, endgameTrends.data, period],
   );
 
-  const activeBucket = BUCKETS.find((b) => b.id === bucket)!;
-
   const buyers = useMemo(
-    () => allBuyers.filter((r) => r.price >= activeBucket.min && r.price <= activeBucket.max).slice(0, 10),
-    [allBuyers, activeBucket],
+    () =>
+      allBuyers
+        .filter((r) => includeUnder1m || r.price >= 1_000_000)
+        .slice(0, 10),
+    [allBuyers, includeUnder1m],
   );
   const sellers = useMemo(
-    () => allSellers.filter((r) => r.price >= activeBucket.min && r.price <= activeBucket.max).slice(0, 10),
-    [allSellers, activeBucket],
+    () =>
+      allSellers
+        .filter((r) => includeUnder1m || r.price >= 1_000_000)
+        .slice(0, 10),
+    [allSellers, includeUnder1m],
   );
 
   const pricesSearch = {
@@ -113,7 +107,7 @@ function LandingPage() {
             <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
           </div>
 
-          <PriceFilters bucket={bucket} setBucket={setBucket} />
+          <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
@@ -131,7 +125,7 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && buyers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No gear is down over the last {periodLabel.toLowerCase()} in this price range.
+              No gear is down over the last {periodLabel.toLowerCase()}.
             </p>
           )}
 
@@ -167,7 +161,7 @@ function LandingPage() {
             <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
           </div>
 
-          <PriceFilters bucket={bucket} setBucket={setBucket} />
+          <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
@@ -185,7 +179,7 @@ function LandingPage() {
 
           {!snapshot.isLoading && !snapshot.isError && !endgameTrends.isLoading && sellers.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No gear is up over the last {periodLabel.toLowerCase()} in this price range.
+              No gear is up over the last {periodLabel.toLowerCase()}.
             </p>
           )}
 
@@ -236,30 +230,25 @@ function LandingPage() {
   );
 }
 
-function PriceFilters({
-  bucket,
-  setBucket,
+function Under1mToggle({
+  includeUnder1m,
+  setIncludeUnder1m,
 }: {
-  bucket: PriceBucket;
-  setBucket: (b: PriceBucket) => void;
+  includeUnder1m: boolean;
+  setIncludeUnder1m: (v: boolean) => void;
 }) {
   return (
-    <div className="mb-2 flex flex-wrap gap-1">
-      {BUCKETS.map((b) => (
-        <button
-          key={b.id}
-          type="button"
-          onClick={() => setBucket(b.id)}
-          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
-            bucket === b.id
-              ? "bg-primary/15 text-primary"
-              : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
-          }`}
-        >
-          {b.label}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={() => setIncludeUnder1m(!includeUnder1m)}
+      className={`mb-2 rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+        includeUnder1m
+          ? "bg-primary/15 text-primary"
+          : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+      }`}
+    >
+      {includeUnder1m ? "Including under 1M" : "Excluding under 1M"}
+    </button>
   );
 }
 
