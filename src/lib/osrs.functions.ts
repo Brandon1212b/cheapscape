@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { allTrackedItemNames, endgameItemNames } from "./tracked-item-names";
+import { allTrackedItemNames } from "./tracked-item-names";
 import type { ItemDetail, PriceRow, PlayerStatsResult, RangeKey, Trend } from "./osrs.server";
 import type { WikiRecResult } from "./wiki-recommended";
 
@@ -18,7 +18,7 @@ export const fetchTrends = createServerFn({ method: "GET" })
 export const fetchEndgameTrends = createServerFn({ method: "GET" }).handler(
   async (): Promise<Record<number, Trend>> => {
     const { getTrends } = await import("./osrs.server");
-    return getTrends(endgameItemNames(), "6m");
+    return getTrends(allTrackedItemNames(), "6m");
   },
 );
 
