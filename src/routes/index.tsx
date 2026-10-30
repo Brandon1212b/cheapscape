@@ -17,13 +17,14 @@ export type { HomeSearch } from "./prices";
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
 const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
 
-type PriceBucket = "0-10" | "11-50" | "50-200" | "200+";
+type PriceBucket = "0-1" | "1-5" | "5-10" | "10-50" | "50+";
 
 const BUCKETS: { id: PriceBucket; label: string; min: number; max: number }[] = [
-  { id: "0-10", label: "0–10M", min: 0, max: 10_000_000 },
-  { id: "11-50", label: "11–50M", min: 11_000_000, max: 50_000_000 },
-  { id: "50-200", label: "50–200M", min: 50_000_000, max: 200_000_000 },
-  { id: "200+", label: "200M+", min: 200_000_000, max: Infinity },
+  { id: "0-1", label: "0–1M", min: 0, max: 1_000_000 },
+  { id: "1-5", label: "1–5M", min: 1_000_000, max: 5_000_000 },
+  { id: "5-10", label: "5–10M", min: 5_000_000, max: 10_000_000 },
+  { id: "10-50", label: "10–50M", min: 10_000_000, max: 50_000_000 },
+  { id: "50+", label: "50M+", min: 50_000_000, max: Infinity },
 ];
 
 export const Route = createFileRoute("/")({
@@ -53,7 +54,7 @@ function LandingPage() {
   const endgameTrends = useEndgameTrends();
 
   const [period, setPeriod] = useState<Period>("30");
-  const [bucket, setBucket] = useState<PriceBucket>("0-10");
+  const [bucket, setBucket] = useState<PriceBucket>("0-1");
 
   useEffect(() => {
     const search = location.search;
@@ -106,28 +107,13 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-4 flex flex-wrap gap-1">
-        {BUCKETS.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => setBucket(b.id)}
-            className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
-              bucket === b.id
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border/60 text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
-            }`}
-          >
-            {b.label}
-          </button>
-        ))}
-      </div>
-
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
           </div>
+
+          <PriceFilters bucket={bucket} setBucket={setBucket} />
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
@@ -180,6 +166,8 @@ function LandingPage() {
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
           </div>
+
+          <PriceFilters bucket={bucket} setBucket={setBucket} />
 
           {(snapshot.isLoading || (snapshot.data && !endgameTrends.data && endgameTrends.isLoading)) && (
             <div className="space-y-2">
@@ -248,6 +236,33 @@ function LandingPage() {
   );
 }
 
+function PriceFilters({
+  bucket,
+  setBucket,
+}: {
+  bucket: PriceBucket;
+  setBucket: (b: PriceBucket) => void;
+}) {
+  return (
+    <div className="mb-2 flex flex-wrap gap-1">
+      {BUCKETS.map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          onClick={() => setBucket(b.id)}
+          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
+            bucket === b.id
+              ? "bg-primary/15 text-primary"
+              : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+          }`}
+        >
+          {b.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ChangeHeader({
   period,
   setPeriod,
@@ -266,10 +281,11 @@ function ChangeHeader({
           value={period}
           onChange={(e) => setPeriod(e.target.value as Period)}
           className="w-full appearance-none bg-transparent pr-3 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground outline-none"
+          style={{ fontSize: "10px" }}
         >
-          <option value="1">1D</option>
-          <option value="7">7D</option>
-          <option value="30">30D</option>
+          <option value="1" style={{ fontSize: "10px" }}>1D</option>
+          <option value="7" style={{ fontSize: "10px" }}>7D</option>
+          <option value="30" style={{ fontSize: "10px" }}>30D</option>
         </select>
         <ChevronDown className="pointer-events-none absolute right-0 top-0.5 size-3" />
       </div>
