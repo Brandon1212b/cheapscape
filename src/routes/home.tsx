@@ -27,6 +27,9 @@ const DEFAULT_RANGE: RangeKey = "1m";
 const DEFAULT_SORT: SortKey = "losers";
 const DEFAULT_TIER = "end";
 
+const ARMOUR_SLOTS = ["head", "chest", "legs", "shield", "hands", "feet", "cape"];
+const JEWELRY_SLOTS = ["neck", "ring"];
+
 const SCROLL_KEY = "ge-watch-home-scroll";
 
 function priceOf(row: PriceRow): number {
@@ -44,6 +47,14 @@ function isSuppliesItem(tags: string[]) {
     tags.includes("potion") ||
     tags.includes("ammo")
   );
+}
+
+function matchesGearType(tags: string[], gearType: string): boolean {
+  if (gearType === "all") return true;
+  if (gearType === "weapon") return tags.includes("weapon");
+  if (gearType === "armour") return ARMOUR_SLOTS.some((s) => tags.includes(s));
+  if (gearType === "jewelry") return JEWELRY_SLOTS.some((s) => tags.includes(s));
+  return true;
 }
 
 function uniqueById(rows: PriceRow[]): PriceRow[] {
@@ -71,6 +82,7 @@ export function Home() {
     set: gearSet,
     skill,
     supply: supplyType,
+    gearType,
   } = search;
 
   const { snapshot, trends } = useMarketData(range);
@@ -100,6 +112,7 @@ export function Home() {
         if (next.set && next.set !== "all") cleaned.set = next.set;
         if (next.skill && next.skill !== "all") cleaned.skill = next.skill;
         if (next.supply && next.supply !== "all") cleaned.supply = next.supply;
+        if (next.gearType && next.gearType !== "all") cleaned.gearType = next.gearType;
         return cleaned as HomeSearch;
       },
       replace: true,
@@ -171,6 +184,7 @@ export function Home() {
               if (gearSlot !== "all" && !tags.includes(gearSlot)) return false;
               if (gearTier !== "all" && !tags.includes(gearTier)) return false;
               if (setItemNames && !setItemNames.has(r.name.toLowerCase())) return false;
+              if (!matchesGearType(tags, gearType)) return false;
             }
             if (filter === "skilling") {
               if (skill !== "all" && !tags.includes(skill)) return false;
@@ -190,6 +204,7 @@ export function Home() {
     gearCombat,
     gearSlot,
     gearTier,
+    gearType,
     setItemNames,
     skill,
     supplyType,
@@ -257,13 +272,14 @@ export function Home() {
       set: "all",
       skill: "all",
       supply: "all",
+      gearType: "all",
     });
   };
 
   const showGearSub = filter === "gear";
   const showSkillSub = filter === "skilling";
   const showSupplySub = filter === "supplies";
-  const gridKey = `${filter}:${gearCombat}:${gearSlot}:${gearTier}:${gearSet}:${skill}:${supplyType}:${sort}:${range}:${query}`;
+  const gridKey = `${filter}:${gearCombat}:${gearSlot}:${gearTier}:${gearSet}:${gearType}:${skill}:${supplyType}:${sort}:${range}:${query}`;
 
   const skillBarEntries = useMemo(() => {
     if (!playerSkills) return [];
@@ -310,6 +326,7 @@ export function Home() {
       gearSlot={gearSlot}
       gearTier={gearTier}
       gearSet={gearSet}
+      gearType={gearType}
       skill={skill}
       supplyType={supplyType}
       query={query}

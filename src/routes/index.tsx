@@ -11,18 +11,31 @@ import { homeMethodRates } from "@/lib/home-highlights";
 import { lateEndgameOpportunities, type HomeFaller, type Period } from "@/lib/home-fallers";
 import { lastHomeRange, lastTabSearch, writeLastSkill, writeTabSearch } from "@/lib/tab-memory";
 import { buildPriceRowsByName } from "@/lib/price-lookup";
+import { CATALOG, GEAR_TYPE_FILTERS } from "@/lib/osrs-catalog";
+import { geLookupName } from "@/lib/ge-name-aliases";
 
 export type { HomeSearch } from "./prices";
 
 /** Old bookmarks used `/?filter=gear`. Do not treat `range`/`sort` as prices params —
  *  those also belong to `/item/$id` and would bounce item clicks back to Prices. */
-const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply"] as const;
+const PRICE_REDIRECT_KEYS = ["filter", "q", "combat", "slot", "tier", "set", "supply", "gearType"] as const;
 
 const PERIODS: Period[] = ["1", "7", "30"];
+
+const ARMOUR_SLOTS = ["head", "chest", "legs", "shield", "hands", "feet", "cape"];
+const JEWELRY_SLOTS = ["neck", "ring"];
 
 function nextPeriod(p: Period): Period {
   const i = PERIODS.indexOf(p);
   return PERIODS[(i + 1) % PERIODS.length]!;
+}
+
+function matchesGearType(tags: string[], gearType: string): boolean {
+  if (gearType === "all") return true;
+  if (gearType === "weapon") return tags.includes("weapon");
+  if (gearType === "armour") return ARMOUR_SLOTS.some((s) => tags.includes(s));
+  if (gearType === "jewelry") return JEWELRY_SLOTS.some((s) => tags.includes(s));
+  return true;
 }
 
 export const Route = createFileRoute("/")({
@@ -53,6 +66,8 @@ function LandingPage() {
 
   const [period, setPeriod] = useState<Period>("30");
   const [includeUnder1m, setIncludeUnder1m] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [gearType, setGearType] = useState<string>("all");
 
   useEffect(() => {
     const search = location.search;
@@ -66,6 +81,17 @@ function LandingPage() {
     void navigate({ to: "/prices", search: record as never, replace: true });
   }, [location.search, navigate]);
 
+  const tagMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const g of CATALOG) {
+      for (const i of g.items) {
+        map.set(i.name.toLowerCase(), i.tags);
+        map.set(geLookupName(i.name).toLowerCase(), i.tags);
+      }
+    }
+    return map;
+  }, []);
+
   const allBuyers = useMemo(
     () => lateEndgameOpportunities(snapshot.data ?? [], endgameTrends.data, "buy", 50, period),
     [snapshot.data, endgameTrends.data, period],
@@ -75,20 +101,28 @@ function LandingPage() {
     [snapshot.data, endgameTrends.data, period],
   );
 
-  const buyers = useMemo(
+  const filteredBuyers = useMemo(
     () =>
-      allBuyers
-        .filter((r) => includeUnder1m || r.price >= 1_000_000)
-        .slice(0, 10),
-    [allBuyers, includeUnder1m],
+      allBuyers.filter((r) => {
+        if (!(includeUnder1m || r.price >= 1_000_000)) return false;
+        const tags = tagMap.get(r.name.toLowerCase()) ?? [];
+        return matchesGearType(tags, gearType);
+      }),
+    [allBuyers, includeUnder1m, gearType, tagMap],
   );
-  const sellers = useMemo(
+  const filteredSellers = useMemo(
     () =>
-      allSellers
-        .filter((r) => includeUnder1m || r.price >= 1_000_000)
-        .slice(0, 10),
-    [allSellers, includeUnder1m],
+      allSellers.filter((r) => {
+        if (!(includeUnder1m || r.price >= 1_000_000)) return false;
+        const tags = tagMap.get(r.name.toLowerCase()) ?? [];
+        return matchesGearType(tags, gearType);
+      }),
+    [allSellers, includeUnder1m, gearType, tagMap],
   );
+
+  const limit = showMore ? 50 : 10;
+  const buyers = useMemo(() => filteredBuyers.slice(0, limit), [filteredBuyers, limit]);
+  const sellers = useMemo(() => filteredSellers.slice(0, limit), [filteredSellers, limit]);
 
   const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
 
@@ -108,6 +142,7 @@ function LandingPage() {
     tier: "all",
     sort: "losers",
     range: "1m",
+    gearType,
   };
 
   const periodLabel = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
@@ -127,10 +162,35 @@ function LandingPage() {
         <CheapscapeWordmark />
       </header>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <div className="mt-4 flex justify-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setGearType("all")}
+          className={`rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+            gearType === "all" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary/40"
+          }`}
+        >
+          All
+        </button>
+        {GEAR_TYPE_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setGearType(gearType === f.key ? "all" : f.key)}
+            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+              gearType === f.key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary/40"
+            }`}
+          >
+            <WikiImage icon={f.wikiIcon} alt="" width={14} height={14} className="size-3.5" />
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
+            <h2 className="text-sm font-semibold">Buying opportunities</h2>
             <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
 
@@ -164,6 +224,15 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
+              {filteredBuyers.length > 10 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMore(!showMore)}
+                  className="mt-2 w-full py-1.5 text-center text-xs font-medium text-primary hover:underline"
+                >
+                  {showMore ? "Show less" : `Show more (${filteredBuyers.length - 10}+)`}
+                </button>
+              )}
             </>
           )}
 
@@ -183,7 +252,7 @@ function LandingPage() {
 
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
+            <h2 className="text-sm font-semibold">Selling opportunities</h2>
             <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
 
@@ -217,6 +286,15 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
+              {filteredSellers.length > 10 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMore(!showMore)}
+                  className="mt-2 w-full py-1.5 text-center text-xs font-medium text-primary hover:underline"
+                >
+                  {showMore ? "Show less" : `Show more (${filteredSellers.length - 10}+)`}
+                </button>
+              )}
             </>
           )}
 
@@ -354,15 +432,15 @@ function ChangeHeader({
 }) {
   const label = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
   return (
-    <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="flex items-center gap-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:gap-2">
       <span className="size-5 shrink-0" />
       <span className="min-w-0 flex-1 text-left">Item</span>
-      <span className="hidden w-10 shrink-0 sm:block" />
-      <span className="w-16 shrink-0 text-right">Price</span>
+      <span className="w-8 shrink-0 sm:w-10" />
+      <span className="w-14 shrink-0 text-right sm:w-16">Price</span>
       <button
         type="button"
         onClick={() => setPeriod(nextPeriod(period))}
-        className="w-10 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+        className="w-9 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground sm:w-10"
       >
         {label}
       </button>
@@ -377,7 +455,7 @@ function ChangeCell({ value }: { value: number }) {
   const opacity = 0.45 + intensity * 0.55;
   return (
     <span
-      className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
+      className="w-10 shrink-0 text-right text-xs font-bold tabular-nums sm:w-12"
       style={{ color: base, opacity }}
     >
       {value > 0 ? "+" : ""}{value}%
@@ -387,8 +465,8 @@ function ChangeCell({ value }: { value: number }) {
 
 function TinySparkline({ series }: { series: { t: number; p: number }[] }) {
   if (series.length < 2) return null;
-  const w = 40;
-  const h = 16;
+  const w = 32;
+  const h = 14;
   const prices = series.map((s) => s.p);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -402,7 +480,7 @@ function TinySparkline({ series }: { series: { t: number; p: number }[] }) {
   const first = series[0]!.p;
   const up = last >= first;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="hidden h-4 w-10 shrink-0 sm:block" preserveAspectRatio="none" aria-hidden>
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-3.5 w-8 shrink-0 sm:h-4 sm:w-10" preserveAspectRatio="none" aria-hidden>
       <path d={pts} fill="none" stroke={up ? "var(--deal)" : "var(--steep)"} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -413,7 +491,7 @@ function NearTag({ row }: { row: HomeFaller }) {
   const dist = (row.price - row.low180) / row.price;
   if (dist < 0.08 || (row.percentile != null && row.percentile <= 12)) {
     return (
-      <span className="ml-1 align-middle rounded bg-steep/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-steep">
+      <span className="ml-1 align-middle rounded bg-steep/15 px-1 text-[8px] font-semibold uppercase tracking-wide text-steep sm:text-[9px]">
         near low
       </span>
     );
@@ -422,7 +500,7 @@ function NearTag({ row }: { row: HomeFaller }) {
     const distHigh = (row.high180 - row.price) / row.price;
     if (distHigh < 0.08 || (row.percentile != null && row.percentile >= 88)) {
       return (
-        <span className="ml-1 align-middle rounded bg-deal/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-deal">
+        <span className="ml-1 align-middle rounded bg-deal/15 px-1 text-[8px] font-semibold uppercase tracking-wide text-deal sm:text-[9px]">
           near high
         </span>
       );
@@ -431,7 +509,7 @@ function NearTag({ row }: { row: HomeFaller }) {
   return null;
 }
 
-const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
+const FALLER_ROW_CLASS = "flex items-center gap-1.5 py-2 hover:bg-secondary/30 sm:gap-2";
 
 /** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
@@ -447,17 +525,17 @@ function HomeFallerLink({
   const inner = (
     <>
       <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
-      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">
+      <span className="min-w-0 flex-1 truncate text-left text-xs font-medium sm:text-sm">
         {row.name}
         {row.kind === "set" && (
-          <span className="ml-1 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="ml-1 align-middle text-[9px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[10px]">
             set
           </span>
         )}
         <NearTag row={row} />
       </span>
       <TinySparkline series={row.series} />
-      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <span className="w-14 shrink-0 text-right text-xs font-semibold tabular-nums gold-text sm:w-16">{gp(row.price)}</span>
       <ChangeCell value={change} />
     </>
   );

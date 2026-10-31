@@ -4,6 +4,7 @@ import {
   GEAR_COMBAT_FILTERS,
   GEAR_SLOT_FILTERS,
   GEAR_TIER_FILTERS,
+  GEAR_TYPE_FILTERS,
   SKILLING_FILTERS,
   SUPPLIES_FILTERS,
 } from "@/lib/osrs-catalog";
@@ -29,6 +30,7 @@ type HomeMainProps = {
   gearSlot: string;
   gearTier: string;
   gearSet: string;
+  gearType: string;
   skill: string;
   supplyType: string;
   query: string;
@@ -65,6 +67,7 @@ export function HomeMain({
   gearSlot,
   gearTier,
   gearSet,
+  gearType,
   skill,
   supplyType,
   query,
@@ -99,12 +102,14 @@ export function HomeMain({
   const combatMeta = GEAR_COMBAT_FILTERS.find((f) => f.key === gearCombat);
   const slotMeta = GEAR_SLOT_FILTERS.find((f) => f.key === gearSlot);
   const tierMeta = GEAR_TIER_FILTERS.find((t) => t.key === gearTier);
+  const typeMeta = GEAR_TYPE_FILTERS.find((t) => t.key === gearType);
   const setMeta = availableSets.find((s) => s.key === gearSet);
   const skillMeta = SKILLING_FILTERS.find((f) => f.key === skill);
   const supplyMeta = SUPPLIES_FILTERS.find((f) => f.key === supplyType);
 
   const gearLabelParts = [
     combatMeta?.label ?? "All combat",
+    typeMeta?.label,
     slotMeta?.label,
     setMeta?.label ?? tierMeta?.label,
   ].filter(Boolean);
@@ -138,7 +143,7 @@ export function HomeMain({
       contentClassName="w-[min(22rem,calc(100vw-1.5rem))]"
       icon={
         <WikiImage
-          icon={combatMeta?.wikiIcon ?? slotMeta?.wikiIcon ?? "Attack_icon.png"}
+          icon={typeMeta?.wikiIcon ?? combatMeta?.wikiIcon ?? slotMeta?.wikiIcon ?? "Attack_icon.png"}
           alt=""
           width={22}
           height={22}
@@ -169,6 +174,23 @@ export function HomeMain({
               label={f.label}
               wikiIcon={f.wikiIcon}
               level={playerSkills?.[f.skillKey]}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          <SubTab
+            active={gearType === "all"}
+            onClick={() => patchSearch({ gearType: "all" })}
+            label="All types"
+          />
+          {GEAR_TYPE_FILTERS.map((f) => (
+            <WikiIconTab
+              key={f.key}
+              active={gearType === f.key}
+              onClick={() => patchSearch({ gearType: gearType === f.key ? "all" : f.key })}
+              label={f.label}
+              wikiIcon={f.wikiIcon}
             />
           ))}
         </div>

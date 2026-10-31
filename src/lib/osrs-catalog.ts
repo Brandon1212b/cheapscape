@@ -30,6 +30,12 @@ export const GEAR_TIER_FILTERS = [
   { key: "end", label: "End" },
 ] as const;
 
+export const GEAR_TYPE_FILTERS = [
+  { key: "weapon", label: "Weapons", wikiIcon: "Weapon_slot.png" },
+  { key: "armour", label: "Armour", wikiIcon: "Body_slot.png" },
+  { key: "jewelry", label: "Jewelry", wikiIcon: "Ring_slot.png" },
+] as const;
+
 export const GEAR_SLOT_FILTERS = [
   { key: "head", label: "Head", wikiIcon: "Head_slot.png", row: 1, col: 2 },
   { key: "cape", label: "Cape", wikiIcon: "Cape_slot.png", row: 2, col: 1 },

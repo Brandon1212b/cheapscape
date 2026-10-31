@@ -21,6 +21,7 @@ const homeSearchSchema = z.object({
   set: z.string().catch("all"),
   skill: z.string().catch("all"),
   supply: z.string().catch("all"),
+  gearType: z.string().catch("all"),
 });
 
 export type HomeSearch = z.infer<typeof homeSearchSchema>;
