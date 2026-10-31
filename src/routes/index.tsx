@@ -53,6 +53,7 @@ function LandingPage() {
 
   const [period, setPeriod] = useState<Period>("30");
   const [includeUnder1m, setIncludeUnder1m] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     const search = location.search;
@@ -75,20 +76,18 @@ function LandingPage() {
     [snapshot.data, endgameTrends.data, period],
   );
 
-  const buyers = useMemo(
-    () =>
-      allBuyers
-        .filter((r) => includeUnder1m || r.price >= 1_000_000)
-        .slice(0, 10),
+  const filteredBuyers = useMemo(
+    () => allBuyers.filter((r) => includeUnder1m || r.price >= 1_000_000),
     [allBuyers, includeUnder1m],
   );
-  const sellers = useMemo(
-    () =>
-      allSellers
-        .filter((r) => includeUnder1m || r.price >= 1_000_000)
-        .slice(0, 10),
+  const filteredSellers = useMemo(
+    () => allSellers.filter((r) => includeUnder1m || r.price >= 1_000_000),
     [allSellers, includeUnder1m],
   );
+
+  const limit = showMore ? 50 : 10;
+  const buyers = useMemo(() => filteredBuyers.slice(0, limit), [filteredBuyers, limit]);
+  const sellers = useMemo(() => filteredSellers.slice(0, limit), [filteredSellers, limit]);
 
   const rowsByName = useMemo(() => buildPriceRowsByName(snapshot.data ?? []), [snapshot.data]);
 
@@ -130,7 +129,7 @@ function LandingPage() {
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top 10 buying opportunities</h2>
+            <h2 className="text-sm font-semibold">Buying opportunities</h2>
             <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
 
@@ -164,6 +163,15 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
+              {filteredBuyers.length > 10 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMore(!showMore)}
+                  className="mt-2 w-full py-1.5 text-center text-xs font-medium text-primary hover:underline"
+                >
+                  {showMore ? "Show less" : `Show more (${filteredBuyers.length - 10}+)`}
+                </button>
+              )}
             </>
           )}
 
@@ -183,7 +191,7 @@ function LandingPage() {
 
         <section className="panel flex flex-col p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Top 10 selling opportunities</h2>
+            <h2 className="text-sm font-semibold">Selling opportunities</h2>
             <Under1mToggle includeUnder1m={includeUnder1m} setIncludeUnder1m={setIncludeUnder1m} />
           </div>
 
@@ -217,6 +225,15 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
+              {filteredSellers.length > 10 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMore(!showMore)}
+                  className="mt-2 w-full py-1.5 text-center text-xs font-medium text-primary hover:underline"
+                >
+                  {showMore ? "Show less" : `Show more (${filteredSellers.length - 10}+)`}
+                </button>
+              )}
             </>
           )}
 
@@ -354,15 +371,15 @@ function ChangeHeader({
 }) {
   const label = period === "1" ? "1D" : period === "7" ? "7D" : "30D";
   return (
-    <div className="flex items-center gap-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="flex items-center gap-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:gap-2">
       <span className="size-5 shrink-0" />
       <span className="min-w-0 flex-1 text-left">Item</span>
-      <span className="hidden w-10 shrink-0 sm:block" />
-      <span className="w-16 shrink-0 text-right">Price</span>
+      <span className="w-8 shrink-0 sm:w-10" />
+      <span className="w-14 shrink-0 text-right sm:w-16">Price</span>
       <button
         type="button"
         onClick={() => setPeriod(nextPeriod(period))}
-        className="w-10 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+        className="w-9 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground sm:w-10"
       >
         {label}
       </button>
@@ -377,7 +394,7 @@ function ChangeCell({ value }: { value: number }) {
   const opacity = 0.45 + intensity * 0.55;
   return (
     <span
-      className="w-12 shrink-0 text-right text-xs font-bold tabular-nums"
+      className="w-10 shrink-0 text-right text-xs font-bold tabular-nums sm:w-12"
       style={{ color: base, opacity }}
     >
       {value > 0 ? "+" : ""}{value}%
@@ -387,8 +404,8 @@ function ChangeCell({ value }: { value: number }) {
 
 function TinySparkline({ series }: { series: { t: number; p: number }[] }) {
   if (series.length < 2) return null;
-  const w = 40;
-  const h = 16;
+  const w = 32;
+  const h = 14;
   const prices = series.map((s) => s.p);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -402,7 +419,7 @@ function TinySparkline({ series }: { series: { t: number; p: number }[] }) {
   const first = series[0]!.p;
   const up = last >= first;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="hidden h-4 w-10 shrink-0 sm:block" preserveAspectRatio="none" aria-hidden>
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-3.5 w-8 shrink-0 sm:h-4 sm:w-10" preserveAspectRatio="none" aria-hidden>
       <path d={pts} fill="none" stroke={up ? "var(--deal)" : "var(--steep)"} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -413,7 +430,7 @@ function NearTag({ row }: { row: HomeFaller }) {
   const dist = (row.price - row.low180) / row.price;
   if (dist < 0.08 || (row.percentile != null && row.percentile <= 12)) {
     return (
-      <span className="ml-1 align-middle rounded bg-steep/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-steep">
+      <span className="ml-1 align-middle rounded bg-steep/15 px-1 text-[8px] font-semibold uppercase tracking-wide text-steep sm:text-[9px]">
         near low
       </span>
     );
@@ -422,7 +439,7 @@ function NearTag({ row }: { row: HomeFaller }) {
     const distHigh = (row.high180 - row.price) / row.price;
     if (distHigh < 0.08 || (row.percentile != null && row.percentile >= 88)) {
       return (
-        <span className="ml-1 align-middle rounded bg-deal/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-deal">
+        <span className="ml-1 align-middle rounded bg-deal/15 px-1 text-[8px] font-semibold uppercase tracking-wide text-deal sm:text-[9px]">
           near high
         </span>
       );
@@ -431,7 +448,7 @@ function NearTag({ row }: { row: HomeFaller }) {
   return null;
 }
 
-const FALLER_ROW_CLASS = "flex items-center gap-2 py-2 hover:bg-secondary/30";
+const FALLER_ROW_CLASS = "flex items-center gap-1.5 py-2 hover:bg-secondary/30 sm:gap-2";
 
 /** Single items open the detail page. Armour sets keep filtering Prices by name. */
 function HomeFallerLink({
@@ -447,17 +464,17 @@ function HomeFallerLink({
   const inner = (
     <>
       <WikiImage icon={row.icon} alt="" width={22} height={22} className="size-5 shrink-0" />
-      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">
+      <span className="min-w-0 flex-1 truncate text-left text-xs font-medium sm:text-sm">
         {row.name}
         {row.kind === "set" && (
-          <span className="ml-1 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="ml-1 align-middle text-[9px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[10px]">
             set
           </span>
         )}
         <NearTag row={row} />
       </span>
       <TinySparkline series={row.series} />
-      <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums gold-text">{gp(row.price)}</span>
+      <span className="w-14 shrink-0 text-right text-xs font-semibold tabular-nums gold-text sm:w-16">{gp(row.price)}</span>
       <ChangeCell value={change} />
     </>
   );
