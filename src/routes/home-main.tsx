@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, X, Swords, TrendingDown, Calendar } from "lucide-react";
 import {
   GEAR_COMBAT_FILTERS,
   GEAR_TYPE_FILTERS,
-  SKILLING_FILTERS,
-  SUPPLIES_FILTERS,
 } from "@/lib/osrs-catalog";
 import { formatCompact } from "@/lib/format";
 import { ItemCard } from "@/components/ItemCard";
@@ -13,12 +11,12 @@ import { Slider } from "@/components/ui/slider";
 import { meetsRequirements, firstMissingRequirement, type PlayerSkills } from "@/lib/player-stats";
 import type { PriceRow, RangeKey, Trend } from "@/lib/osrs.server";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { EquipmentPaperDoll, SubTab, WikiIconTab } from "./home-ui";
+import { EquipmentPaperDoll, WikiIconTab } from "./home-ui";
 import type { HomeSearch } from "./prices";
 import { WikiImage } from "@/components/WikiImage";
 
 type Filter = "all" | "gear" | "skilling" | "supplies";
-type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
+type SortKey = "gainers" | "losers" | "expensive" | "cheap";
 
 type HomeMainProps = {
   filter: Filter;
@@ -57,7 +55,6 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "gainers", label: "Gainers" },
   { key: "cheap", label: "Cheap" },
   { key: "expensive", label: "Expensive" },
-  { key: "value", label: "Best value" },
 ];
 
 const RANGES: { key: RangeKey; label: string }[] = [
@@ -97,10 +94,6 @@ export function HomeMain({
   const [expanded, setExpanded] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const combatMeta = GEAR_COMBAT_FILTERS.find((f) => f.key === gearCombat);
-  const sortMeta = SORTS.find((s) => s.key === sort);
-  const rangeMeta = RANGES.find((r) => r.key === range);
-
   const priceValue: [number, number] = [
     priceMin ?? 0,
     priceMax ?? 100_000_000,
@@ -109,6 +102,90 @@ export function HomeMain({
   return (
     <main className="mx-auto w-full max-w-7xl px-3 pb-6 pt-0 sm:px-4">
       <div className="sticky top-0 z-30 -mx-3 border-b border-border/40 bg-background/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4">
+        {/* Compact controls first */}
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {showGearSub && (
+            <div className="relative">
+              <Swords className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <select
+                value={gearCombat}
+                onChange={(e) => patchSearch({ combat: e.target.value })}
+                className="h-9 appearance-none rounded-lg border border-border/60 bg-secondary/40 pl-7 pr-6 text-xs"
+              >
+                <option value="all">All style</option>
+                {GEAR_COMBAT_FILTERS.map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="relative">
+            <TrendingDown className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={sort}
+              onChange={(e) => patchSearch({ sort: e.target.value as SortKey })}
+              className="h-9 appearance-none rounded-lg border border-border/60 bg-secondary/40 pl-7 pr-6 text-xs"
+            >
+              {SORTS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative">
+            <Calendar className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={range}
+              onChange={(e) => patchSearch({ range: e.target.value as RangeKey })}
+              className="h-9 appearance-none rounded-lg border border-border/60 bg-secondary/40 pl-7 pr-6 text-xs"
+            >
+              {RANGES.map((r) => (
+                <option key={r.key} value={r.key}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            {searchOpen ? (
+              <div className="relative">
+                <Input
+                  value={query}
+                  onChange={(e) => patchSearch({ q: e.target.value })}
+                  placeholder="Search..."
+                  className="h-9 w-40 pl-8 text-sm"
+                  autoFocus
+                />
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    patchSearch({ q: "" });
+                    setSearchOpen(false);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="inline-flex size-9 items-center justify-center rounded-full border border-border/60 bg-secondary/40"
+              >
+                <Search className="size-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Type chips + expand */}
         {showGearSub && (
           <div className="mb-2 flex items-center gap-1.5 overflow-x-auto">
@@ -149,87 +226,12 @@ export function HomeMain({
           </div>
         )}
 
-        {/* Compact controls row */}
-        <div className="flex flex-wrap items-center gap-2">
-          {showGearSub && (
-            <select
-              value={gearCombat}
-              onChange={(e) => patchSearch({ combat: e.target.value })}
-              className="h-9 rounded-lg border border-border/60 bg-secondary/40 px-2 text-xs"
-            >
-              <option value="all">All style</option>
-              {GEAR_COMBAT_FILTERS.map((f) => (
-                <option key={f.key} value={f.key}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <select
-            value={sort}
-            onChange={(e) => patchSearch({ sort: e.target.value as SortKey })}
-            className="h-9 rounded-lg border border-border/60 bg-secondary/40 px-2 text-xs"
-          >
-            {SORTS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={range}
-            onChange={(e) => patchSearch({ range: e.target.value as RangeKey })}
-            className="h-9 rounded-lg border border-border/60 bg-secondary/40 px-2 text-xs"
-          >
-            {RANGES.map((r) => (
-              <option key={r.key} value={r.key}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-
-          <div className="ml-auto flex items-center gap-2">
-            {searchOpen ? (
-              <div className="relative">
-                <Input
-                  value={query}
-                  onChange={(e) => patchSearch({ q: e.target.value })}
-                  placeholder="Search..."
-                  className="h-9 w-40 pl-8 text-sm"
-                  autoFocus
-                />
-                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    patchSearch({ q: "" });
-                    setSearchOpen(false);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="inline-flex size-9 items-center justify-center rounded-full border border-border/60 bg-secondary/40"
-              >
-                <Search className="size-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Price range slider */}
-        <div className="mt-2 px-1">
+        {/* Price range slider — 1m steps */}
+        <div className="mt-1 px-1">
           <Slider
             min={0}
             max={100_000_000}
-            step={100_000}
+            step={1_000_000}
             value={priceValue}
             onValueChange={([min, max]) =>
               patchSearch({
@@ -245,20 +247,21 @@ export function HomeMain({
           </div>
         </div>
 
-        {/* Expanded silhouette */}
+        {/* Expanded silhouette under the arrow */}
         {expanded && showGearSub && (
-          <div className="mt-3 rounded-lg border border-border/60 bg-secondary/20 p-3">
+          <div className="mt-2 rounded-lg border border-border/60 bg-secondary/20 p-3">
             <div className="mb-2 flex flex-wrap gap-1.5">
-              <SubTab
-                active={gearType === "all"}
-                onClick={() => patchSearch({ gearType: "all" })}
+              <WikiIconTab
+                active={gearCombat === "all"}
+                onClick={() => patchSearch({ combat: "all" })}
                 label="All"
+                wikiIcon="Attack_icon.png"
               />
-              {GEAR_TYPE_FILTERS.map((f) => (
+              {GEAR_COMBAT_FILTERS.map((f) => (
                 <WikiIconTab
                   key={f.key}
-                  active={gearType === f.key}
-                  onClick={() => patchSearch({ gearType: gearType === f.key ? "all" : f.key })}
+                  active={gearCombat === f.key}
+                  onClick={() => patchSearch({ combat: gearCombat === f.key ? "all" : f.key })}
                   label={f.label}
                   wikiIcon={f.wikiIcon}
                 />
@@ -275,7 +278,6 @@ export function HomeMain({
         )}
       </div>
 
-      {/* Existing skill/supply sections remain for non-gear */}
       {showSkillSub && (
         <div className="mt-3 text-sm text-muted-foreground">Skill filters (simplified)</div>
       )}
@@ -283,17 +285,16 @@ export function HomeMain({
         <div className="mt-3 text-sm text-muted-foreground">Supply filters (simplified)</div>
       )}
 
-      {/* Results grid — unchanged */}
       {snapshot.isLoading && (
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-1.5 sm:gap-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="panel h-36 animate-pulse opacity-60 sm:h-56" />
+            <div key={i} className="panel h-28 animate-pulse opacity-60 sm:h-40" />
           ))}
         </div>
       )}
 
       {!snapshot.isLoading && allRows.length > 0 && (
-        <div key={gridKey} className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+        <div key={gridKey} className="mt-3 grid grid-cols-2 gap-1.5 sm:gap-2 lg:grid-cols-3 xl:grid-cols-4">
           {allRows.map((row) => {
             const reqs = itemReqs[row.id];
             const locked = playerSkills != null && !meetsRequirements(playerSkills, reqs);
