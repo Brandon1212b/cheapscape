@@ -310,7 +310,7 @@ export function HomeMain({
                 active={gearCombat === "all"}
                 onClick={() => patchSearch({ combat: "all" })}
                 label="All"
-                wikiIcon="Rune_platebody.png"
+                wikiIcon="PvP_Challenges_-_Gear_Switching_icon.png"
               />
               {GEAR_COMBAT_FILTERS.map((f) => (
                 <WikiIconTab
