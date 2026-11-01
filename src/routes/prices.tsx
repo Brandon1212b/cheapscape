@@ -8,7 +8,6 @@ type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
 const DEFAULT_RANGE: RangeKey = "1m";
 const DEFAULT_SORT: SortKey = "losers";
 const DEFAULT_FILTER = "gear" as const;
-const DEFAULT_TIER = "end";
 
 const homeSearchSchema = z.object({
   filter: z.enum(["all", "gear", "skilling", "supplies"]).catch(DEFAULT_FILTER),
@@ -17,11 +16,13 @@ const homeSearchSchema = z.object({
   q: z.string().catch(""),
   combat: z.string().catch("all"),
   slot: z.string().catch("all"),
-  tier: z.string().catch(DEFAULT_TIER),
+  tier: z.string().catch("all"),
   set: z.string().catch("all"),
   skill: z.string().catch("all"),
   supply: z.string().catch("all"),
   gearType: z.string().catch("all"),
+  priceMin: z.coerce.number().optional(),
+  priceMax: z.coerce.number().optional(),
 });
 
 export type HomeSearch = z.infer<typeof homeSearchSchema>;
