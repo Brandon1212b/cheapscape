@@ -21,7 +21,8 @@ let requirementsMapCache: Cache<Record<number, Record<string, number>>> | null =
 
 export async function getTrends(names: string[], range: RangeKey = "6m"): Promise<Record<number, Trend>> {
   const scope = `${range}:${namesScope(names)}`;
-  const ttl = range === "1d" || range === "1w" ? 5 * MIN : 60 * MIN;
+  // Short ranges still need fresher data; longer ranges change slowly.
+  const ttl = range === "1d" || range === "1w" ? 15 * MIN : 120 * MIN;
   const cached = trendCaches.get(scope);
   if (cached && Date.now() - cached.at < ttl) return cached.value;
 
@@ -38,7 +39,8 @@ export async function getTrends(names: string[], range: RangeKey = "6m"): Promis
     const rows = await getSnapshot(names);
     const cfg = RANGES[range];
     const result: Record<number, Trend> = {};
-    await pool(rows, 20, async (row) => {
+    // Lower concurrency to be nicer to the wiki API.
+    await pool(rows, 5, async (row) => {
       try {
         const points = await timeseriesForRow(row.id, cfg.step);
         if (!points) return;
@@ -154,7 +156,7 @@ async function getEquipmentStats(id: number): Promise<EquipmentStats | null> {
 export async function getItemDetail(names: string[], id: number, range: RangeKey): Promise<ItemDetail> {
   const key = `${id}:${range}`;
   const cached = detailCache.get(key);
-  const ttl = range === "1d" ? 2 * MIN : 15 * MIN;
+  const ttl = range === "1d" ? 5 * MIN : 30 * MIN;
   if (cached && Date.now() - cached.at < ttl) return cached.value;
 
   const rows = await getSnapshot(names);
@@ -257,7 +259,7 @@ export async function getItemRequirementsMap(names: string[]): Promise<Record<nu
   const rows = await getSnapshot(names);
   const result: Record<number, Record<string, number>> = {};
 
-  await pool(rows, 8, async (row) => {
+  await pool(rows, 4, async (row) => {
     const eq = await getEquipmentStats(row.id);
     if (eq?.requirements && Object.keys(eq.requirements).length > 0) {
       const norm: Record<string, number> = {};
