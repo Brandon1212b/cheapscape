@@ -126,6 +126,29 @@ function sumAlignedSeries(all: TimeseriesPoint[][], extraCoins = 0): TimeseriesP
     }));
 }
 
+const timeseriesCache = new Map<string, { at: number; value: TimeseriesPoint[] }>();
+
+function timeseriesTtl(step: "5m" | "1h" | "6h" | "24h"): number {
+  if (step === "5m") return 5 * 60_000;
+  if (step === "1h") return 30 * 60_000;
+  return 2 * 60 * 60_000;
+}
+
+async function fetchTimeseries(
+  id: number,
+  step: "5m" | "1h" | "6h" | "24h",
+): Promise<TimeseriesPoint[]> {
+  const key = `${id}:${step}`;
+  const cached = timeseriesCache.get(key);
+  const ttl = timeseriesTtl(step);
+  if (cached && Date.now() - cached.at < ttl) return cached.value;
+
+  const res = await api<{ data: TimeseriesPoint[] }>(`/timeseries?timestep=${step}&id=${id}`);
+  const value = res.data ?? [];
+  timeseriesCache.set(key, { at: Date.now(), value });
+  return value;
+}
+
 export async function timeseriesForRow(
   rowId: number,
   step: "5m" | "1h" | "6h" | "24h",
@@ -137,13 +160,13 @@ export async function timeseriesForRow(
     for (const src of comp.sources) {
       const fetchId = await sourceGeId(src.name);
       if (fetchId == null) return null;
-      const res = await api<{ data: TimeseriesPoint[] }>(`/timeseries?timestep=${step}&id=${fetchId}`);
-      const scaled = scalePoints(res.data ?? [], src.qty);
+      const data = await fetchTimeseries(fetchId, step);
+      const scaled = scalePoints(data, src.qty);
       if (scaled.length === 0) return null;
       parts.push(scaled);
     }
     return sumAlignedSeries(parts, comp.fixedCoins ?? 0);
   }
-  const res = await api<{ data: TimeseriesPoint[] }>(`/timeseries?timestep=${step}&id=${rowId}`);
-  return res.data ?? [];
+  const data = await fetchTimeseries(rowId, step);
+  return data;
 }
