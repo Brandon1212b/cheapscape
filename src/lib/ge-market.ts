@@ -39,8 +39,8 @@ export async function getTrends(names: string[], range: RangeKey = "6m"): Promis
     const rows = await getSnapshot(names);
     const cfg = RANGES[range];
     const result: Record<number, Trend> = {};
-    // Lower concurrency to be nicer to the wiki API.
-    await pool(rows, 5, async (row) => {
+    // Keep concurrency high enough that the batch finishes before the function times out.
+    await pool(rows, 15, async (row) => {
       try {
         const points = await timeseriesForRow(row.id, cfg.step);
         if (!points) return;
@@ -259,7 +259,7 @@ export async function getItemRequirementsMap(names: string[]): Promise<Record<nu
   const rows = await getSnapshot(names);
   const result: Record<number, Record<string, number>> = {};
 
-  await pool(rows, 4, async (row) => {
+  await pool(rows, 8, async (row) => {
     const eq = await getEquipmentStats(row.id);
     if (eq?.requirements && Object.keys(eq.requirements).length > 0) {
       const norm: Record<string, number> = {};
