@@ -152,28 +152,44 @@ export function HomeMain({
     return () => window.removeEventListener("scroll", onScroll);
   }, [expanded]);
 
+  // Dropdown value: special categories or combat style
+  const categoryValue =
+    filter === "supplies" ? "supplies" : filter === "skilling" ? "skilling" : gearCombat;
+
+  const onCategoryChange = (value: string) => {
+    if (value === "supplies" || value === "skilling") {
+      handleFilterChange(value);
+      return;
+    }
+    // Gear style
+    if (filter !== "gear") {
+      handleFilterChange("gear");
+    }
+    patchSearch({ combat: value });
+  };
+
   return (
     <main className="mx-auto w-full max-w-7xl px-3 pb-6 pt-0 sm:px-4">
       <div className="sticky top-0 z-30 -mx-3 border-b border-border/40 bg-background/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4">
         {/* Compact controls first */}
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          {showGearSub && (
-            <div className="relative">
-              <Layers className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <select
-                value={gearCombat}
-                onChange={(e) => patchSearch({ combat: e.target.value })}
-                className="h-9 appearance-none rounded-lg border border-border/60 bg-secondary/40 pl-7 pr-6 text-xs"
-              >
-                <option value="all">All style</option>
-                {GEAR_COMBAT_FILTERS.map((f) => (
-                  <option key={f.key} value={f.key}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="relative">
+            <Layers className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={categoryValue}
+              onChange={(e) => onCategoryChange(e.target.value)}
+              className="h-9 appearance-none rounded-lg border border-border/60 bg-secondary/40 pl-7 pr-6 text-xs"
+            >
+              <option value="all">All style</option>
+              {GEAR_COMBAT_FILTERS.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+              <option value="supplies">Supplies</option>
+              <option value="skilling">Training resources</option>
+            </select>
+          </div>
 
           <div className="relative">
             <TrendingDown className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
