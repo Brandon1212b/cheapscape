@@ -278,7 +278,6 @@ export function HomeMain({
                 active={gearSlot}
                 onSelect={(slot) => {
                   patchSearch({ slot });
-                  setExpanded(false);
                 }}
               />
               <div className="min-w-[8rem] flex-1 rounded-md border border-border/50 bg-secondary/30 p-2 text-xs">
