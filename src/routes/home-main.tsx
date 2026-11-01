@@ -66,6 +66,28 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "1y", label: "1y" },
 ];
 
+const PRICE_FLOOR = 1;
+const PRICE_CEILING = 100_000_000;
+const LOG_FLOOR = Math.log(PRICE_FLOOR);
+const LOG_CEILING = Math.log(PRICE_CEILING);
+const LOG_SPAN = LOG_CEILING - LOG_FLOOR;
+
+function priceToLogPos(price: number): number {
+  if (price <= 0) return 0;
+  const clamped = Math.max(PRICE_FLOOR, Math.min(PRICE_CEILING, price));
+  return (Math.log(clamped) - LOG_FLOOR) / LOG_SPAN;
+}
+
+function logPosToPrice(pos: number): number {
+  if (pos <= 0) return 0;
+  if (pos >= 1) return PRICE_CEILING;
+  const raw = Math.exp(LOG_FLOOR + pos * LOG_SPAN);
+  // round to a sensible step based on magnitude
+  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = Math.max(1, magnitude / 10);
+  return Math.round(raw / step) * step;
+}
+
 export function HomeMain({
   filter,
   handleFilterChange,
@@ -94,9 +116,12 @@ export function HomeMain({
   const [expanded, setExpanded] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const priceValue: [number, number] = [
-    priceMin ?? 0,
-    priceMax ?? 100_000_000,
+  const displayMin = priceMin ?? 0;
+  const displayMax = priceMax ?? PRICE_CEILING;
+
+  const logValue: [number, number] = [
+    Math.round(priceToLogPos(displayMin) * 1000),
+    Math.round(priceToLogPos(displayMax) * 1000),
   ];
 
   const avgChange = useMemo(() => {
@@ -244,24 +269,26 @@ export function HomeMain({
           </div>
         )}
 
-        {/* Price range slider — 1m steps */}
+        {/* Price range slider — logarithmic */}
         <div className="mt-1 px-1">
           <Slider
             min={0}
-            max={100_000_000}
-            step={1_000_000}
-            value={priceValue}
-            onValueChange={([min, max]) =>
+            max={1000}
+            step={1}
+            value={logValue}
+            onValueChange={([lo, hi]) => {
+              const nextMin = logPosToPrice(lo / 1000);
+              const nextMax = logPosToPrice(hi / 1000);
               patchSearch({
-                priceMin: min === 0 ? undefined : min,
-                priceMax: max >= 100_000_000 ? undefined : max,
-              })
-            }
+                priceMin: nextMin <= 0 ? undefined : nextMin,
+                priceMax: nextMax >= PRICE_CEILING ? undefined : nextMax,
+              });
+            }}
             className="w-full"
           />
           <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-            <span>{formatCompact(priceValue[0])}</span>
-            <span>{priceValue[1] >= 100_000_000 ? "100m+" : formatCompact(priceValue[1])}</span>
+            <span>{displayMin <= 0 ? "0" : formatCompact(displayMin)}</span>
+            <span>{displayMax >= PRICE_CEILING ? "100m+" : formatCompact(displayMax)}</span>
           </div>
         </div>
 
