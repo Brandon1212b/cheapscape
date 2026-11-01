@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronDown, Search, X, Swords, TrendingDown, Calendar } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronDown, Search, X, Swords, TrendingDown, Calendar, Layers } from "lucide-react";
 import {
   GEAR_COMBAT_FILTERS,
   GEAR_TYPE_FILTERS,
@@ -99,6 +99,12 @@ export function HomeMain({
     priceMax ?? 100_000_000,
   ];
 
+  const avgChange = useMemo(() => {
+    if (!trends.data || allRows.length === 0) return null;
+    const sum = allRows.reduce((s, r) => s + (trends.data?.[r.id]?.changeWindow ?? 0), 0);
+    return sum / allRows.length;
+  }, [allRows, trends.data]);
+
   return (
     <main className="mx-auto w-full max-w-7xl px-3 pb-6 pt-0 sm:px-4">
       <div className="sticky top-0 z-30 -mx-3 border-b border-border/40 bg-background/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4">
@@ -106,7 +112,7 @@ export function HomeMain({
         <div className="mb-2 flex flex-wrap items-center gap-2">
           {showGearSub && (
             <div className="relative">
-              <Swords className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Layers className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <select
                 value={gearCombat}
                 onChange={(e) => patchSearch({ combat: e.target.value })}
@@ -255,7 +261,7 @@ export function HomeMain({
                 active={gearCombat === "all"}
                 onClick={() => patchSearch({ combat: "all" })}
                 label="All"
-                wikiIcon="Attack_icon.png"
+                wikiIcon="Strength_icon.png"
               />
               {GEAR_COMBAT_FILTERS.map((f) => (
                 <WikiIconTab
@@ -267,13 +273,28 @@ export function HomeMain({
                 />
               ))}
             </div>
-            <EquipmentPaperDoll
-              active={gearSlot}
-              onSelect={(slot) => {
-                patchSearch({ slot });
-                setExpanded(false);
-              }}
-            />
+            <div className="flex flex-wrap items-start gap-3">
+              <EquipmentPaperDoll
+                active={gearSlot}
+                onSelect={(slot) => {
+                  patchSearch({ slot });
+                  setExpanded(false);
+                }}
+              />
+              <div className="min-w-[8rem] flex-1 rounded-md border border-border/50 bg-secondary/30 p-2 text-xs">
+                <div className="font-medium text-foreground">{allRows.length} item{allRows.length === 1 ? "" : "s"}</div>
+                {totalCost > 0 && (
+                  <div className="text-muted-foreground">
+                    Total: <span className="font-semibold tabular-nums text-foreground">{formatCompact(totalCost)} gp</span>
+                  </div>
+                )}
+                {avgChange != null && (
+                  <div className={avgChange >= 0 ? "text-green-500" : "text-red-500"}>
+                    Avg {avgChange >= 0 ? "+" : ""}{avgChange.toFixed(1)}%
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
