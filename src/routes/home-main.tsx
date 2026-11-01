@@ -171,8 +171,8 @@ export function HomeMain({
   return (
     <main className="mx-auto w-full max-w-7xl px-3 pb-6 pt-0 sm:px-4">
       <div className="sticky top-0 z-30 -mx-3 border-b border-border/40 bg-background/95 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4">
-        {/* Compact controls first */}
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+        {/* Compact controls */}
+        <div className="mb-2 flex items-center gap-2">
           <div className="relative">
             <Layers className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <select
@@ -220,42 +220,9 @@ export function HomeMain({
               ))}
             </select>
           </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            {searchOpen ? (
-              <div className="relative">
-                <Input
-                  value={query}
-                  onChange={(e) => patchSearch({ q: e.target.value })}
-                  placeholder="Search..."
-                  className="h-9 w-40 pl-8 text-sm"
-                  autoFocus
-                />
-                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    patchSearch({ q: "" });
-                    setSearchOpen(false);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="inline-flex size-9 items-center justify-center rounded-full border border-border/60 bg-secondary/40"
-              >
-                <Search className="size-4" />
-              </button>
-            )}
-          </div>
         </div>
 
-        {/* Type chips + expand */}
+        {/* Type chips + search + expand */}
         {showGearSub && (
           <div className="mb-2 flex items-center gap-1.5 overflow-x-auto">
             <button
@@ -284,14 +251,46 @@ export function HomeMain({
                 {f.label}
               </button>
             ))}
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              aria-expanded={expanded}
-              className="ml-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border/60 bg-secondary/40"
-            >
-              <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
-            </button>
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+              {searchOpen ? (
+                <div className="relative">
+                  <Input
+                    value={query}
+                    onChange={(e) => patchSearch({ q: e.target.value })}
+                    placeholder="Search..."
+                    className="h-8 w-32 pl-7 text-xs"
+                    autoFocus
+                  />
+                  <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      patchSearch({ q: "" });
+                      setSearchOpen(false);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSearchOpen(true)}
+                  className="inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-secondary/40"
+                >
+                  <Search className="size-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}
+                className="inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-secondary/40"
+              >
+                <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+              </button>
+            </div>
           </div>
         )}
 
