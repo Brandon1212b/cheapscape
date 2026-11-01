@@ -86,28 +86,7 @@ export const equipmentCache = new Map<number, Cache<EquipmentStats | null>>();
 
 export const MIN = 60_000;
 
-// Simple spacing so we don't burst the wiki API.
-let lastRequestAt = 0;
-const MIN_REQUEST_GAP_MS = 40;
-const requestQueue: Promise<unknown> = Promise.resolve();
-let queueTail = requestQueue;
-
-async function spaceRequest(): Promise<void> {
-  const prev = queueTail;
-  let release!: () => void;
-  queueTail = new Promise((r) => {
-    release = r;
-  });
-  await prev;
-  const now = Date.now();
-  const wait = Math.max(0, MIN_REQUEST_GAP_MS - (now - lastRequestAt));
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastRequestAt = Date.now();
-  release();
-}
-
 export async function api<T>(path: string): Promise<T> {
-  await spaceRequest();
   const res = await fetch(`${BASE}${path}`, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`OSRS price API ${res.status}: ${await res.text()}`);
   return (await res.json()) as T;
