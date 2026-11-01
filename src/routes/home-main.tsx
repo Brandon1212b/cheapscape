@@ -66,25 +66,35 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "1y", label: "1y" },
 ];
 
-const PRICE_FLOOR = 1;
+// Five equal segments: 0→1m, 1m→5m, 5m→10m, 10m→50m, 50m→100m
+const PRICE_BREAKS = [0, 1_000_000, 5_000_000, 10_000_000, 50_000_000, 100_000_000];
 const PRICE_CEILING = 100_000_000;
-const LOG_FLOOR = Math.log(PRICE_FLOOR);
-const LOG_CEILING = Math.log(PRICE_CEILING);
-const LOG_SPAN = LOG_CEILING - LOG_FLOOR;
 
-function priceToLogPos(price: number): number {
+function priceToPos(price: number): number {
   if (price <= 0) return 0;
-  const clamped = Math.max(PRICE_FLOOR, Math.min(PRICE_CEILING, price));
-  return (Math.log(clamped) - LOG_FLOOR) / LOG_SPAN;
+  if (price >= PRICE_CEILING) return 1;
+  for (let i = 0; i < PRICE_BREAKS.length - 1; i++) {
+    const lo = PRICE_BREAKS[i];
+    const hi = PRICE_BREAKS[i + 1];
+    if (price <= hi) {
+      const t = (price - lo) / (hi - lo);
+      return (i + t) / 5;
+    }
+  }
+  return 1;
 }
 
-function logPosToPrice(pos: number): number {
+function posToPrice(pos: number): number {
   if (pos <= 0) return 0;
   if (pos >= 1) return PRICE_CEILING;
-  const raw = Math.exp(LOG_FLOOR + pos * LOG_SPAN);
-  // round to a sensible step based on magnitude
-  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = Math.max(1, magnitude / 10);
+  const scaled = pos * 5;
+  const i = Math.min(4, Math.floor(scaled));
+  const t = scaled - i;
+  const lo = PRICE_BREAKS[i];
+  const hi = PRICE_BREAKS[i + 1];
+  const raw = lo + t * (hi - lo);
+  // round to a sensible step for the segment
+  const step = Math.max(1_000, Math.round((hi - lo) / 50));
   return Math.round(raw / step) * step;
 }
 
@@ -119,9 +129,9 @@ export function HomeMain({
   const displayMin = priceMin ?? 0;
   const displayMax = priceMax ?? PRICE_CEILING;
 
-  const logValue: [number, number] = [
-    Math.round(priceToLogPos(displayMin) * 1000),
-    Math.round(priceToLogPos(displayMax) * 1000),
+  const sliderValue: [number, number] = [
+    Math.round(priceToPos(displayMin) * 1000),
+    Math.round(priceToPos(displayMax) * 1000),
   ];
 
   const avgChange = useMemo(() => {
@@ -269,16 +279,16 @@ export function HomeMain({
           </div>
         )}
 
-        {/* Price range slider — logarithmic */}
+        {/* Price range slider — 5 equal segments */}
         <div className="mt-1 px-1">
           <Slider
             min={0}
             max={1000}
             step={1}
-            value={logValue}
+            value={sliderValue}
             onValueChange={([lo, hi]) => {
-              const nextMin = logPosToPrice(lo / 1000);
-              const nextMax = logPosToPrice(hi / 1000);
+              const nextMin = posToPrice(lo / 1000);
+              const nextMax = posToPrice(hi / 1000);
               patchSearch({
                 priceMin: nextMin <= 0 ? undefined : nextMin,
                 priceMax: nextMax >= PRICE_CEILING ? undefined : nextMax,
