@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, Search, X, Swords, TrendingDown, Calendar, Layers } from "lucide-react";
 import {
   GEAR_COMBAT_FILTERS,
@@ -104,6 +104,18 @@ export function HomeMain({
     const sum = allRows.reduce((s, r) => s + (trends.data?.[r.id]?.changeWindow ?? 0), 0);
     return sum / allRows.length;
   }, [allRows, trends.data]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const startY = window.scrollY;
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - startY) > 32) {
+        setExpanded(false);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [expanded]);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-3 pb-6 pt-0 sm:px-4">
