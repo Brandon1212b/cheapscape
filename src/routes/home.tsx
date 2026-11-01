@@ -7,7 +7,6 @@ import {
   type CatalogItem,
 } from "@/lib/osrs-catalog";
 import "@/lib/catalog-pvm-additions";
-import { gearSetsForTier, gearSetItemNames } from "@/lib/gear-sets";
 import { geLookupName } from "@/lib/ge-name-aliases";
 import { costPerBonus } from "@/lib/item-bonuses";
 import { itemSearchText } from "@/lib/item-search-aliases";
@@ -15,7 +14,7 @@ import type { PriceRow, RangeKey, Trend } from "@/lib/osrs.server";
 import { useMarketData } from "@/hooks/useMarketData";
 import { usePlayerLookup } from "@/hooks/usePlayerLookup";
 import { buildPriceRowsByName, lookupPriceRow } from "@/lib/price-lookup";
-import type { HomeSearch } from "./index";
+import type { HomeSearch } from "./prices";
 import { HomeMain } from "./home-main";
 
 const routeApi = getRouteApi("/prices");
@@ -25,7 +24,6 @@ type SortKey = "gainers" | "losers" | "expensive" | "cheap" | "value";
 
 const DEFAULT_RANGE: RangeKey = "1m";
 const DEFAULT_SORT: SortKey = "losers";
-const DEFAULT_TIER = "end";
 
 const ARMOUR_SLOTS = ["head", "chest", "legs", "shield", "hands", "feet", "cape"];
 const JEWELRY_SLOTS = ["neck", "ring"];
@@ -78,11 +76,11 @@ export function Home() {
     q: query,
     combat: gearCombat,
     slot: gearSlot,
-    tier: gearTier,
-    set: gearSet,
     skill,
     supply: supplyType,
     gearType,
+    priceMin,
+    priceMax,
   } = search;
 
   const { snapshot, trends } = useMarketData(range);
@@ -108,11 +106,11 @@ export function Home() {
         if (next.q) cleaned.q = next.q;
         if (next.combat && next.combat !== "all") cleaned.combat = next.combat;
         if (next.slot && next.slot !== "all") cleaned.slot = next.slot;
-        if (next.tier && next.tier !== DEFAULT_TIER) cleaned.tier = next.tier;
-        if (next.set && next.set !== "all") cleaned.set = next.set;
         if (next.skill && next.skill !== "all") cleaned.skill = next.skill;
         if (next.supply && next.supply !== "all") cleaned.supply = next.supply;
         if (next.gearType && next.gearType !== "all") cleaned.gearType = next.gearType;
+        if (next.priceMin != null) cleaned.priceMin = next.priceMin;
+        if (next.priceMax != null) cleaned.priceMax = next.priceMax;
         return cleaned as HomeSearch;
       },
       replace: true,
@@ -146,13 +144,6 @@ export function Home() {
     return map;
   }, []);
 
-  const setItemNames = useMemo(() => gearSetItemNames(gearSet), [gearSet]);
-
-  const availableSets = useMemo(
-    () => gearSetsForTier(gearTier, gearCombat),
-    [gearTier, gearCombat],
-  );
-
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
     const searching = q.length > 0;
@@ -178,12 +169,13 @@ export function Home() {
           .filter((r) => {
             if (searching) return true;
             const tags = itemByName.get(r.name.toLowerCase())?.tags ?? [];
+            const price = priceOf(r);
+            if (priceMin != null && price < priceMin) return false;
+            if (priceMax != null && price > priceMax) return false;
             if (filter === "gear") {
               if (isSuppliesItem(tags)) return false;
               if (gearCombat !== "all" && !tags.includes(gearCombat)) return false;
               if (gearSlot !== "all" && !tags.includes(gearSlot)) return false;
-              if (gearTier !== "all" && !tags.includes(gearTier)) return false;
-              if (setItemNames && !setItemNames.has(r.name.toLowerCase())) return false;
               if (!matchesGearType(tags, gearType)) return false;
             }
             if (filter === "skilling") {
@@ -203,12 +195,12 @@ export function Home() {
     rowsByName,
     gearCombat,
     gearSlot,
-    gearTier,
     gearType,
-    setItemNames,
     skill,
     supplyType,
     itemByName,
+    priceMin,
+    priceMax,
   ]);
 
   const allRows = useMemo(() => {
@@ -268,8 +260,6 @@ export function Home() {
       filter: next,
       combat: "all",
       slot: "all",
-      tier: next === "gear" ? DEFAULT_TIER : "all",
-      set: "all",
       skill: "all",
       supply: "all",
       gearType: "all",
@@ -279,7 +269,7 @@ export function Home() {
   const showGearSub = filter === "gear";
   const showSkillSub = filter === "skilling";
   const showSupplySub = filter === "supplies";
-  const gridKey = `${filter}:${gearCombat}:${gearSlot}:${gearTier}:${gearSet}:${gearType}:${skill}:${supplyType}:${sort}:${range}:${query}`;
+  const gridKey = `${filter}:${gearCombat}:${gearSlot}:${gearType}:${skill}:${supplyType}:${sort}:${range}:${query}:${priceMin}:${priceMax}`;
 
   const skillBarEntries = useMemo(() => {
     if (!playerSkills) return [];
@@ -324,14 +314,14 @@ export function Home() {
       handleFilterChange={handleFilterChange}
       gearCombat={gearCombat}
       gearSlot={gearSlot}
-      gearTier={gearTier}
-      gearSet={gearSet}
       gearType={gearType}
       skill={skill}
       supplyType={supplyType}
       query={query}
       sort={sort}
       range={range}
+      priceMin={priceMin}
+      priceMax={priceMax}
       patchSearch={patchSearch}
       rsnDraft={rsnDraft}
       setRsnDraft={setRsnDraft}
@@ -344,7 +334,6 @@ export function Home() {
       showGearSub={showGearSub}
       showSkillSub={showSkillSub}
       showSupplySub={showSupplySub}
-      availableSets={availableSets}
       snapshot={snapshot}
       trends={trends}
       allRows={allRows}
