@@ -6,14 +6,14 @@ import { readClientCache, writeClientCache } from "@/lib/client-cache";
 import type { PriceRow, RangeKey, Trend } from "@/lib/osrs.server";
 
 const SNAPSHOT_KEY = "osrs-snapshot";
-const snapshotTtl = 15 * 60_000;
+const snapshotTtl = 10 * 60_000;
 
 function trendsKey(range: RangeKey) {
   return `osrs-trends:${range}`;
 }
 
 function trendsTtl(range: RangeKey) {
-  return range === "1d" || range === "1w" ? 20 * 60_000 : 90 * 60_000;
+  return range === "1d" || range === "1w" ? 15 * 60_000 : 60 * 60_000;
 }
 
 /** Shared GE snapshot + range trends. Query keys are stable so / and /methods share the cache. */
@@ -25,9 +25,8 @@ export function useMarketData(range: RangeKey = "6m", opts?: { trends?: boolean 
   const snapshot = useQuery({
     queryKey: ["osrs-snapshot"],
     queryFn: () => snapshotFn(),
-    // Poll less aggressively — server also caches, so this just keeps the UI fresh.
-    refetchInterval: 5 * 60_000,
-    staleTime: 4 * 60_000,
+    refetchInterval: 3 * 60_000,
+    staleTime: 60_000,
     placeholderData: () => readClientCache<PriceRow[]>(SNAPSHOT_KEY, snapshotTtl),
   });
 
@@ -35,8 +34,7 @@ export function useMarketData(range: RangeKey = "6m", opts?: { trends?: boolean 
     queryKey: ["osrs-trends", range],
     queryFn: () => trendsFn({ data: { range } }),
     enabled: wantTrends,
-    // Trends change slowly; avoid refetching on every navigation.
-    staleTime: range === "1d" || range === "1w" ? 15 * 60_000 : 60 * 60_000,
+    staleTime: range === "1d" || range === "1w" ? 5 * 60_000 : 30 * 60_000,
     placeholderData: (prev) =>
       prev ?? readClientCache<Record<number, Trend>>(trendsKey(range), trendsTtl(range)),
   });
