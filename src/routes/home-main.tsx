@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { Search, X, Layers } from "lucide-react";
 import {
   GEAR_COMBAT_FILTERS,
   GEAR_SLOT_FILTERS,
@@ -117,6 +117,12 @@ export function HomeMain({
   const combatLevel = combatMeta ? playerSkills?.[combatMeta.skillKey] : undefined;
   const skillLevel = skill !== "all" ? playerSkills?.[skill] : undefined;
 
+  const avgChange = useMemo(() => {
+    if (!trends.data || allRows.length === 0) return null;
+    const sum = allRows.reduce((s, r) => s + (trends.data?.[r.id]?.changeWindow ?? 0), 0);
+    return sum / allRows.length;
+  }, [allRows, trends.data]);
+
   const searchExpanded = !showGearSub || searchOpen;
 
   useEffect(() => {
@@ -134,6 +140,8 @@ export function HomeMain({
     setSearchOpen(false);
   };
 
+  const isAllCombat = gearCombat === "all" && !typeMeta && !slotMeta;
+
   const gearPopover = (
     <FilterPopover
       open={gearOpen}
@@ -142,14 +150,18 @@ export function HomeMain({
       className="min-w-0 flex-1"
       contentClassName="w-[min(22rem,calc(100vw-1.5rem))]"
       icon={
-        <WikiImage
-          icon={typeMeta?.wikiIcon ?? combatMeta?.wikiIcon ?? slotMeta?.wikiIcon ?? "Attack_icon.png"}
-          alt=""
-          width={22}
-          height={22}
-          lazy={false}
-          className="size-[22px] shrink-0"
-        />
+        isAllCombat ? (
+          <Layers className="size-[22px] shrink-0 text-foreground" />
+        ) : (
+          <WikiImage
+            icon={typeMeta?.wikiIcon ?? combatMeta?.wikiIcon ?? slotMeta?.wikiIcon ?? "Attack_icon.png"}
+            alt=""
+            width={22}
+            height={22}
+            lazy={false}
+            className="size-[22px] shrink-0"
+          />
+        )
       }
       label={`${gearLabel}${combatLevel != null ? ` ${DOT} ${combatLevel}` : ""}`}
       ariaLabel="Gear filters"
@@ -160,6 +172,7 @@ export function HomeMain({
             active={gearCombat === "all"}
             onClick={() => patchSearch({ combat: "all", set: "all" })}
             label="All combat"
+            icon={Layers}
           />
           {GEAR_COMBAT_FILTERS.map((f) => (
             <WikiIconTab
@@ -183,6 +196,7 @@ export function HomeMain({
             active={gearType === "all"}
             onClick={() => patchSearch({ gearType: "all" })}
             label="All types"
+            icon={Layers}
           />
           {GEAR_TYPE_FILTERS.map((f) => (
             <WikiIconTab
@@ -198,55 +212,71 @@ export function HomeMain({
         <div className="flex flex-wrap items-start gap-3">
           <EquipmentPaperDoll active={gearSlot} onSelect={(slot) => patchSearch({ slot })} />
 
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className="flex shrink-0 flex-col gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Progression
-              </span>
-              <div className="flex flex-col gap-1">
-                <SubTab
-                  active={gearTier === "all"}
-                  onClick={() => patchSearch({ tier: "all", set: "all" })}
-                  label="All stages"
-                />
-                {GEAR_TIER_FILTERS.map((t) => (
-                  <SubTab
-                    key={t.key}
-                    active={gearTier === t.key}
-                    onClick={() =>
-                      patchSearch({
-                        tier: gearTier === t.key ? "all" : t.key,
-                        set: "all",
-                      })
-                    }
-                    label={t.label}
-                  />
-                ))}
-              </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="rounded-md border border-border/50 bg-secondary/20 p-2 text-xs">
+              <div className="font-medium text-foreground">{allRows.length} item{allRows.length === 1 ? "" : "s"}</div>
+              {totalCost > 0 && (
+                <div className="text-muted-foreground">
+                  Total: <span className="font-semibold tabular-nums text-foreground">{formatCompact(totalCost)} gp</span>
+                </div>
+              )}
+              {avgChange != null && (
+                <div className={avgChange >= 0 ? "text-green-500" : "text-red-500"}>
+                  Avg {avgChange >= 0 ? "+" : ""}{avgChange.toFixed(1)}%
+                </div>
+              )}
             </div>
 
-            {availableSets.length > 0 && (
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5 border-l border-border/60 pl-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="flex shrink-0 flex-col gap-1.5">
                 <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Wiki stage
+                  Progression
                 </span>
-                <div className="flex max-h-[11.5rem] flex-col gap-1 overflow-y-auto overscroll-contain pr-0.5">
+                <div className="flex flex-col gap-1">
                   <SubTab
-                    active={gearSet === "all"}
-                    onClick={() => patchSearch({ set: "all" })}
+                    active={gearTier === "all"}
+                    onClick={() => patchSearch({ tier: "all", set: "all" })}
                     label="All stages"
                   />
-                  {availableSets.map((s) => (
+                  {GEAR_TIER_FILTERS.map((t) => (
                     <SubTab
-                      key={s.key}
-                      active={gearSet === s.key}
-                      onClick={() => patchSearch({ set: gearSet === s.key ? "all" : s.key })}
-                      label={s.label}
+                      key={t.key}
+                      active={gearTier === t.key}
+                      onClick={() =>
+                        patchSearch({
+                          tier: gearTier === t.key ? "all" : t.key,
+                          set: "all",
+                        })
+                      }
+                      label={t.label}
                     />
                   ))}
                 </div>
               </div>
-            )}
+
+              {availableSets.length > 0 && (
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5 border-l border-border/60 pl-3">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Wiki stage
+                  </span>
+                  <div className="flex max-h-[11.5rem] flex-col gap-1 overflow-y-auto overscroll-contain pr-0.5">
+                    <SubTab
+                      active={gearSet === "all"}
+                      onClick={() => patchSearch({ set: "all" })}
+                      label="All stages"
+                    />
+                    {availableSets.map((s) => (
+                      <SubTab
+                        key={s.key}
+                        active={gearSet === s.key}
+                        onClick={() => patchSearch({ set: gearSet === s.key ? "all" : s.key })}
+                        label={s.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
